@@ -1,0 +1,64 @@
+/* ==========================================================================
+   BoCW District Monitoring & Execution Portal - Custom Stylesheet
+   ========================================================================== */
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* Search Button Gradient & Shimmer Effect */
+.btn-search-cool {
+    background-image: linear-gradient(to right, #4f46e5, #7c3aed, #4f46e5);
+    background-size: 200% auto;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-search-cool:hover {
+    background-position: right center;
+}
+
+.btn-search-shimmer {
+    background: linear-gradient(
+        to right,
+        transparent 0%,
+        rgba(255, 255, 255, 0.22) 50%,
+        transparent 100%
+    );
+    transform: translateX(-100%);
+    transition: transform 0.7s ease-out;
+}
+
+.group:hover .btn-search-shimmer {
+    transform: translateX(100%);
+}
+
+/* Modal Backdrop Transition */
+.modal-backdrop {
+    backdrop-filter: blur(2px);
+}
+
+/* Subtle Custom Scrollbar for Tables */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
