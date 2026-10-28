@@ -5,7 +5,9 @@
  */
 
 async function exportCampCallListExcel() {
-    const block = document.getElementById('blockSelector').value;
+    const block = getAuthorizedBlock();
+    if (!block) return;
+
     const gp = document.getElementById('gpSelector').value;
     const statusFilter = document.getElementById('statusFilter').value;
     const statusText = document.getElementById('syncStatusText');
@@ -120,6 +122,11 @@ async function exportCampCallListExcel() {
 }
 
 function exportLeaderboardExcel() {
+    if (!isMasterAdmin()) {
+        alert("Access Denied: Only ACMO Master can export the 22-Block Leaderboard.");
+        return;
+    }
+
     if (!cachedLeaderboard || cachedLeaderboard.length === 0) {
         alert("Wait for the leaderboard to finish loading first.");
         return;

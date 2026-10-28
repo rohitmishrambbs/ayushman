@@ -5,7 +5,8 @@
  */
 
 async function loadGPDropdown() {
-    const block = document.getElementById('blockSelector').value;
+    const block = getAuthorizedBlock();
+    if (!block) return;
     const gpSelect = document.getElementById('gpSelector');
     gpSelect.innerHTML = `<option value="ALL">Loading GPs for ${block}...</option>`;
 
@@ -29,7 +30,11 @@ async function loadGPDropdown() {
 }
 
 async function loadBlockData() {
-    const block = document.getElementById('blockSelector').value;
+    const block = getAuthorizedBlock();
+    if (!block) return;
+
+    document.getElementById('activeBlockTitle').innerText = `${block} Block Terminal`;
+
     const gp = document.getElementById('gpSelector').value;
     const statusFilter = document.getElementById('statusFilter').value;
     const searchQuery = document.getElementById('searchInput').value.trim();
@@ -87,12 +92,13 @@ async function loadBlockData() {
 }
 
 async function updateBlockSummaryBar(block) {
+    const authorizedBlock = getAuthorizedBlock() || block;
     const bar = document.getElementById('blockSummaryBar');
     try {
         const { data, error } = await supabaseClient.rpc('get_block_leaderboard');
         if (error || !data) return;
 
-        const row = data.find(r => r.block_name === block);
+        const row = data.find(r => r.block_name === authorizedBlock);
         if (!row) return;
 
         const notAppliedTotal = Number(row.not_applied_members || 0) + Number(row.unidentified_members || 0);
@@ -135,6 +141,9 @@ async function updateBlockSummaryBar(block) {
 
 async function confirmAddMember() {
     if (!pendingAddFamilyContext) return;
+    const block = getAuthorizedBlock();
+    if (!block) return;
+
     const nameInput = document.getElementById('newMemberName').value.trim().toUpperCase();
     const statusInput = document.getElementById('newMemberStatus').value;
     const saveBtn = document.getElementById('saveNewMemberBtn');
@@ -151,7 +160,7 @@ async function confirmAddMember() {
     const newRecord = {
         family_id: pendingAddFamilyContext.family_id,
         member_id: internalKey,
-        block_name: pendingAddFamilyContext.block_name,
+        block_name: block,
         gram_panchayat_name: pendingAddFamilyContext.gp_name,
         mobile_no: pendingAddFamilyContext.mobile_no,
         member_name: nameInput,
@@ -171,7 +180,6 @@ async function confirmAddMember() {
         if (error) throw error;
 
         currentLoadedRecords.push(newRecord);
-        const block = document.getElementById('blockSelector').value;
         closeAddMemberModal();
         renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
         updateBlockSummaryBar(block);
@@ -187,6 +195,8 @@ async function confirmAddMember() {
 
 async function deleteExtraMember(internalMemberId, memberName) {
     if (!String(internalMemberId).startsWith('EXTRA_')) return;
+    const block = getAuthorizedBlock();
+    if (!block) return;
     if (!confirm(`Remove added member "${memberName}" from this family?`)) return;
 
     const statusText = document.getElementById('syncStatusText');
@@ -195,12 +205,12 @@ async function deleteExtraMember(internalMemberId, memberName) {
         const { error } = await supabaseClient
             .from('bocw_members')
             .delete()
-            .eq('member_id', String(internalMemberId));
+            .eq('member_id', String(internalMemberId))
+            .eq('block_name', block);
 
         if (error) throw error;
 
         currentLoadedRecords = currentLoadedRecords.filter(r => String(r.member_id) !== String(internalMemberId));
-        const block = document.getElementById('blockSelector').value;
         renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
         updateBlockSummaryBar(block);
         statusText.innerText = "Removed Extra Member";
@@ -255,6 +265,8 @@ async function confirmNotTraceable() {
 }
 
 async function saveMemberStatus(memberId, status, remark) {
+    const block = getAuthorizedBlock();
+    if (!block) return;
     const statusText = document.getElementById('syncStatusText');
     try {
         statusText.innerText = `Saving...`;
@@ -265,13 +277,15 @@ async function saveMemberStatus(memberId, status, remark) {
                 remark: remark,
                 updated_at: new Date().toISOString()
             })
-            .eq('member_id', String(memberId));
+            .eq('member_id', String(memberId))
+            .eq('block_name', block);
 
         if (error) {
             const fallback = await supabaseClient
                 .from('bocw_members')
                 .update({ STATUS: status })
-                .eq('member_id', String(memberId));
+                .eq('member_id', String(memberId))
+                .eq('block_name', block);
             if (fallback.error) throw fallback.error;
         }
 
@@ -282,7 +296,6 @@ async function saveMemberStatus(memberId, status, remark) {
         }
 
         statusText.innerText = `Saved Status`;
-        const block = document.getElementById('blockSelector').value;
         renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
         updateBlockSummaryBar(block);
     } catch (err) {
@@ -299,6 +312,8 @@ async function toggleFamilyStatus(familyId, clickedStatus) {
 }
 
 async function saveFamilyStatus(familyId, status, remark) {
+    const block = getAuthorizedBlock();
+    if (!block) return;
     const statusText = document.getElementById('syncStatusText');
     try {
         statusText.innerText = `Updating Family ${familyId}...`;
@@ -309,13 +324,15 @@ async function saveFamilyStatus(familyId, status, remark) {
                 remark: remark,
                 updated_at: new Date().toISOString()
             })
-            .eq('family_id', String(familyId));
+            .eq('family_id', String(familyId))
+            .eq('block_name', block);
 
         if (error) {
             const fallback = await supabaseClient
                 .from('bocw_members')
                 .update({ STATUS: status })
-                .eq('family_id', String(familyId));
+                .eq('family_id', String(familyId))
+                .eq('block_name', block);
             if (fallback.error) throw fallback.error;
         }
 
@@ -327,7 +344,6 @@ async function saveFamilyStatus(familyId, status, remark) {
         });
 
         statusText.innerText = `Saved Family ${familyId}`;
-        const block = document.getElementById('blockSelector').value;
         renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
         updateBlockSummaryBar(block);
     } catch (err) {

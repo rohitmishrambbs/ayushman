@@ -177,7 +177,7 @@ function copyFamilyId(famId, btnEl) {
 
 // Modal Open/Close Helpers
 function openAddMemberModal(familyId, blockName, gpName, mobileNo) {
-    const activeBlock = blockName || document.getElementById('blockSelector').value;
+    const activeBlock = getAuthorizedBlock() || blockName;
     pendingAddFamilyContext = {
         family_id: String(familyId),
         block_name: String(activeBlock),
@@ -200,3 +200,4 @@ function closeReasonModal() {
     pendingTraceableTarget = null;
     document.getElementById('reasonModal').classList.add('hidden');
 }
+

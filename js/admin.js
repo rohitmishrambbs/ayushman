@@ -5,6 +5,10 @@
  */
 
 async function loadAdminLeaderboard() {
+    if (!isMasterAdmin()) {
+        return;
+    }
+
     const tbody = document.getElementById('leaderboardTableBody');
     tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-slate-400">Calculating real-time stats across all 70,673 records...</td></tr>`;
 
@@ -38,6 +42,7 @@ async function loadAdminLeaderboard() {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-indigo-50/50 cursor-pointer transition";
             tr.onclick = () => {
+                if (!isMasterAdmin()) return;
                 document.getElementById('blockSelector').value = row.block_name;
                 switchRole('deo');
                 onBlockChange();
@@ -82,6 +87,10 @@ async function loadAdminLeaderboard() {
 }
 
 async function checkSpeedAnomalies() {
+    if (!isMasterAdmin()) {
+        return;
+    }
+
     const banner = document.getElementById('antiCheatBanner');
     banner.classList.remove('hidden');
     banner.className = "mb-4 p-4 rounded-xl border bg-slate-50 border-slate-200 text-slate-700 text-xs font-semibold";

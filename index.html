@@ -15,307 +15,360 @@
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
 
-    <!-- ================= ADD EXTRA MEMBER MODAL (ONLY NAME & STATUS) ================= -->
-    <div id="addMemberModal" class="fixed inset-0 bg-slate-900/75 modal-backdrop z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-slate-200">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <div>
-                    <h3 class="font-bold text-slate-900 text-base">Add Extra PM-JAY Family Member</h3>
-                    <p class="text-xs text-indigo-600 font-mono font-bold mt-0.5" id="addModalFamilyLabel">Family ID: --</p>
-                </div>
-                <button onclick="closeAddMemberModal()" class="text-slate-400 hover:text-slate-600 text-sm font-bold">✕</button>
-            </div>
-
-            <div class="space-y-3.5">
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">1. Member Name (सदस्य का नाम) *</label>
-                    <input type="text" id="newMemberName" placeholder="Enter member name as on PM-JAY portal..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white" onkeydown="if(event.key==='Enter') confirmAddMember()">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">2. Card Status (कार्ड की स्थिति) *</label>
-                    <select id="newMemberStatus" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="Approved" selected>Approved</option>
-                        <option value="Portal Pending">Portal Pending</option>
-                        <option value="Not Applied">Not Applied</option>
-                        <option value="No Record Found">No Record Found</option>
-                        <option value="Not Traceable">Not Traceable</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                <button onclick="closeAddMemberModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition">Cancel</button>
-                <button id="saveNewMemberBtn" onclick="confirmAddMember()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition">+ Save Member to Family</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ================= NOT TRACEABLE REASON MODAL ================= -->
-    <div id="reasonModal" class="fixed inset-0 bg-slate-900/75 modal-backdrop z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-slate-200">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="font-bold text-slate-900 text-base">Select 'Not Traceable' Reason</h3>
-                <button onclick="closeReasonModal()" class="text-slate-400 hover:text-slate-600 text-sm font-bold">✕</button>
-            </div>
-            <p class="text-xs text-slate-500" id="reasonModalSubtitle">Select verified field reason:</p>
-            <div>
-                <select id="reasonDropdown" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
-                    <option value="Deceased / Death (मृत्यु)">1. Deceased / Death (मृत्यु)</option>
-                    <option value="Permanent Migration / Out of District (स्थायी पलायन)">2. Permanent Migration / Out of District (स्थायी पलायन)</option>
-                    <option value="Married Out of Block (विवाह पश्चात स्थानांतरण)">3. Married Out of Block (विवाह पश्चात स्थानांतरण)</option>
-                    <option value="Unknown in GP / Wrong Mobile (ग्राम पंचायत में अज्ञात / गलत नंबर)">4. Unknown in GP / Wrong Mobile (ग्राम पंचायत में अज्ञात / गलत नंबर)</option>
-                    <option value="Duplicate / Card Already Made via Ration Card (राशन कार्ड से पूर्व निर्मित)">5. Duplicate / Card Already Made via Ration Card (राशन कार्ड से पूर्व निर्मित)</option>
-                    <option value="Refused eKYC (लाभार्थी द्वारा इंकार)">6. Refused eKYC (लाभार्थी द्वारा इंकार)</option>
-                </select>
-            </div>
-            <div class="flex justify-end gap-2 pt-2">
-                <button onclick="closeReasonModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition">Cancel</button>
-                <button onclick="confirmNotTraceable()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-sm transition">Save Not Traceable</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Top Navigation Header -->
-    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-3">
-                <div class="bg-indigo-600 px-3 py-2 rounded-lg font-black text-lg tracking-wider">BoCW</div>
-                <div>
-                    <h1 class="font-bold text-lg leading-tight">Azamgarh District Execution & Monitoring Hub</h1>
-                    <p class="text-xs text-slate-400">70,673 Base Members &bull; 17,922 Families &bull; 22 Blocks Live Cloud Sync</p>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-3">
-                <div class="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-1">
-                    <span class="text-xs text-slate-400 px-2 font-medium">MODE:</span>
-                    <select id="roleSelector" onchange="switchRole(this.value)" class="bg-slate-900 text-white text-sm font-semibold rounded px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="deo">Block DEO Terminal</option>
-                        <option value="admin">ACMO District Command (22 Blocks)</option>
-                    </select>
-                </div>
-                <div class="hidden md:flex items-center gap-2 bg-emerald-950/90 border border-emerald-700/60 px-3 py-1.5 rounded-full text-emerald-400 text-xs font-semibold">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>Supabase Live</span>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
-
-        <!-- VIEW A: BLOCK DEO TERMINAL -->
-        <div id="deoView" class="space-y-6">
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4">
-                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-100 pb-4">
+    <!-- ================= SECURE LOGIN SCREEN ================= -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden">
+            <div class="bg-slate-900 px-6 py-5 text-white border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-600 px-3 py-2 rounded-xl font-black text-lg tracking-wider shadow-md">BoCW</div>
                     <div>
-                        <span class="inline-block bg-indigo-50 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-md mb-1 uppercase tracking-wider">Field Execution Workspace</span>
-                        <h2 class="text-xl font-bold text-slate-900" id="activeBlockTitle">MOHAMMADPUR Block Terminal</h2>
-                        <p class="text-xs text-slate-500 mt-0.5">Click any Family ID chip to copy for the NHA Portal. Use <b>+ Add Member</b> on any family card if extra members appear on PM-JAY.</p>
-                    </div>
-
-                    <div class="bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-lg text-right">
-                        <p class="text-[11px] text-slate-500 font-medium uppercase">Sync Status</p>
-                        <p class="text-sm font-bold text-indigo-600" id="syncStatusText">Initializing...</p>
+                        <h1 class="font-bold text-base leading-tight">Azamgarh Monitoring Portal</h1>
+                        <p class="text-xs text-slate-400 mt-0.5">Authorized Block DEO &amp; ACMO Command Access</p>
                     </div>
                 </div>
+            </div>
 
-                <!-- Filters -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
-                    <div class="lg:col-span-3">
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">1. Select Block</label>
-                        <select id="blockSelector" onchange="onBlockChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="MOHAMMADPUR" selected>MOHAMMADPUR (3,542)</option>
-                            <option value="AHIRAULA">AHIRAULA (4,093)</option>
-                            <option value="LALGANJ">LALGANJ (4,028)</option>
-                            <option value="MIRZAPUR">MIRZAPUR (4,027)</option>
-                            <option value="PAWAI">PAWAI (3,940)</option>
-                            <option value="THEKMA">THEKMA (3,844)</option>
-                            <option value="AZMATGARH">AZMATGARH (3,734)</option>
-                            <option value="PHULPUR">PHULPUR (3,440)</option>
-                            <option value="TAHBARPUR">TAHBARPUR (3,281)</option>
-                            <option value="MAHRAJGANJ">MAHRAJGANJ (3,271)</option>
-                            <option value="KOILSA">KOILSA (3,202)</option>
-                            <option value="RANI KI SARAI">RANI KI SARAI (3,147)</option>
-                            <option value="TARWA">TARWA (3,128)</option>
-                            <option value="MARTINGANJ">MARTINGANJ (3,105)</option>
-                            <option value="SATHIYAON">SATHIYAON (3,058)</option>
-                            <option value="HARAIYA">HARAIYA (2,859)</option>
-                            <option value="MEHNAGAR">MEHNAGAR (2,844)</option>
-                            <option value="BILARIYAGANJ">BILARIYAGANJ (2,779)</option>
-                            <option value="PALHANI">PALHANI (2,595)</option>
-                            <option value="ATRAULIA">ATRAULIA (2,405)</option>
-                            <option value="JAHANAGANJ">JAHANAGANJ (2,334)</option>
-                            <option value="PALHANA">PALHANA (2,017)</option>
-                        </select>
+            <form onsubmit="handleLoginSubmit(event)" class="p-6 space-y-4">
+                <div id="loginErrorBox" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold"></div>
+
+                <div>
+                    <label for="loginUsername" class="block text-xs font-bold text-slate-700 uppercase mb-1.5">User ID (Block DEO / ACMO)</label>
+                    <input
+                        type="text"
+                        id="loginUsername"
+                        autocomplete="username"
+                        placeholder="e.g. DEO_MOHAMMADPUR or ACMO_AZAMGARH"
+                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label for="loginPassword" class="block text-xs font-bold text-slate-700 uppercase">Password</label>
+                        <button type="button" onclick="togglePasswordVisibility()" id="passwordEyeLabel" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">Show</button>
+                    </div>
+                    <input
+                        type="password"
+                        id="loginPassword"
+                        autocomplete="current-password"
+                        placeholder="Enter your assigned password..."
+                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+                        required
+                    >
+                </div>
+
+                <button
+                    type="submit"
+                    id="loginSubmitBtn"
+                    class="group relative w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 btn-search-cool text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-500/25 hover:shadow-lg hover:shadow-indigo-500/40 active:scale-95 transition-all cursor-pointer overflow-hidden"
+                >
+                    <span class="absolute inset-0 w-full h-full btn-search-shimmer"></span>
+                    <span id="loginSubmitText" class="relative tracking-wide">Sign In to Portal</span>
+                </button>
+
+                <p class="text-[11px] text-center text-slate-400 pt-1">
+                    Block DEOs are restricted to their assigned block data.
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= AUTHENTICATED APPLICATION SHELL ================= -->
+    <div id="appShell" class="hidden min-h-screen flex flex-col">
+
+        <!-- ================= ADD EXTRA MEMBER MODAL (ONLY NAME & STATUS) ================= -->
+        <div id="addMemberModal" class="fixed inset-0 bg-slate-900/75 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-slate-200">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base">Add Extra PM-JAY Family Member</h3>
+                        <p class="text-xs text-indigo-600 font-mono font-bold mt-0.5" id="addModalFamilyLabel">Family ID: --</p>
+                    </div>
+                    <button onclick="closeAddMemberModal()" class="text-slate-400 hover:text-slate-600 text-sm font-bold">✕</button>
+                </div>
+
+                <div class="space-y-3.5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">1. Member Name (सदस्य का नाम) *</label>
+                        <input type="text" id="newMemberName" placeholder="Enter member name as on PM-JAY portal..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white" onkeydown="if(event.key==='Enter') confirmAddMember()">
                     </div>
 
-                    <div class="lg:col-span-3">
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">2. Gram Panchayat (GP)</label>
-                        <select id="gpSelector" onchange="resetPageAndLoad()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="ALL">All Gram Panchayats</option>
-                        </select>
-                    </div>
-
-                    <div class="lg:col-span-2">
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">3. Status Filter</label>
-                        <select id="statusFilter" onchange="resetPageAndLoad()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="ALL" selected>All Statuses</option>
-                            <option value="Not Applied">Not Applied</option>
-                            <option value="Approved">Approved</option>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">2. Card Status (कार्ड की स्थिति) *</label>
+                        <select id="newMemberStatus" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="Approved" selected>Approved</option>
                             <option value="Portal Pending">Portal Pending</option>
+                            <option value="Not Applied">Not Applied</option>
                             <option value="No Record Found">No Record Found</option>
                             <option value="Not Traceable">Not Traceable</option>
-                            <option value="EXTRA_ONLY">✨ Extra Added Members Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button onclick="closeAddMemberModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition">Cancel</button>
+                    <button id="saveNewMemberBtn" onclick="confirmAddMember()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition">+ Save Member to Family</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= NOT TRACEABLE REASON MODAL ================= -->
+        <div id="reasonModal" class="fixed inset-0 bg-slate-900/75 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-slate-200">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <h3 class="font-bold text-slate-900 text-base">Select 'Not Traceable' Reason</h3>
+                    <button onclick="closeReasonModal()" class="text-slate-400 hover:text-slate-600 text-sm font-bold">✕</button>
+                </div>
+                <p class="text-xs text-slate-500" id="reasonModalSubtitle">Select verified field reason:</p>
+                <div>
+                    <select id="reasonDropdown" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                        <option value="Deceased / Death (मृत्यु)">1. Deceased / Death (मृत्यु)</option>
+                        <option value="Permanent Migration / Out of District (स्थायी पलायन)">2. Permanent Migration / Out of District (स्थायी पलायन)</option>
+                        <option value="Married Out of Block (विवाह पश्चात स्थानांतरण)">3. Married Out of Block (विवाह पश्चात स्थानांतरण)</option>
+                        <option value="Unknown in GP / Wrong Mobile (ग्राम पंचायत में अज्ञात / गलत नंबर)">4. Unknown in GP / Wrong Mobile (ग्राम पंचायत में अज्ञात / गलत नंबर)</option>
+                        <option value="Duplicate / Card Already Made via Ration Card (राशन कार्ड से पूर्व निर्मित)">5. Duplicate / Card Already Made via Ration Card (राशन कार्ड से पूर्व निर्मित)</option>
+                        <option value="Refused eKYC (लाभार्थी द्वारा इंकार)">6. Refused eKYC (लाभार्थी द्वारा इंकार)</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button onclick="closeReasonModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition">Cancel</button>
+                    <button onclick="confirmNotTraceable()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-sm transition">Save Not Traceable</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Navigation Header -->
+        <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-600 px-3 py-2 rounded-lg font-black text-lg tracking-wider">BoCW</div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight">Azamgarh District Execution & Monitoring Hub</h1>
+                        <p class="text-xs text-slate-400">70,673 Base Members &bull; 17,922 Families &bull; 22 Blocks Live Cloud Sync</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <div id="modeSwitcherContainer" class="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-1">
+                        <span class="text-xs text-slate-400 px-2 font-medium">MODE:</span>
+                        <select id="roleSelector" onchange="switchRole(this.value)" class="bg-slate-900 text-white text-sm font-semibold rounded px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="deo">Block DEO Terminal</option>
+                            <option value="admin">ACMO District Command (22 Blocks)</option>
                         </select>
                     </div>
 
-                    <div class="lg:col-span-4">
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">4. Search Block (Name, Family ID, Mobile)</label>
-                        <div class="flex gap-2">
-                            <div class="relative w-full">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <div id="loggedInUserBadge" class="flex items-center gap-1.5 bg-indigo-950/90 border border-indigo-700/60 px-3 py-1.5 rounded-lg text-indigo-300 text-xs font-bold">
+                        <span>Authenticated</span>
+                    </div>
+
+                    <div class="hidden md:flex items-center gap-2 bg-emerald-950/90 border border-emerald-700/60 px-3 py-1.5 rounded-full text-emerald-400 text-xs font-semibold">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>Supabase Live</span>
+                    </div>
+
+                    <button onclick="logoutPortalUser()" title="Sign out of portal" class="px-3 py-1.5 bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-bold rounded-lg transition cursor-pointer">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+
+            <!-- VIEW A: BLOCK DEO TERMINAL -->
+            <div id="deoView" class="space-y-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4">
+                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-100 pb-4">
+                        <div>
+                            <span class="inline-block bg-indigo-50 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-md mb-1 uppercase tracking-wider">Field Execution Workspace</span>
+                            <h2 class="text-xl font-bold text-slate-900" id="activeBlockTitle">MOHAMMADPUR Block Terminal</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Click any Family ID chip to copy for the NHA Portal. Use <b>+ Add Member</b> on any family card if extra members appear on PM-JAY.</p>
+                        </div>
+
+                        <div class="bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-lg text-right">
+                            <p class="text-[11px] text-slate-500 font-medium uppercase">Sync Status</p>
+                            <p class="text-sm font-bold text-indigo-600" id="syncStatusText">Initializing...</p>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+                        <div class="lg:col-span-3">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">1. Assigned Block</label>
+                            <select id="blockSelector" onchange="onBlockChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="MOHAMMADPUR" selected>MOHAMMADPUR (3,542)</option>
+                            </select>
+                        </div>
+
+                        <div class="lg:col-span-3">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">2. Gram Panchayat (GP)</label>
+                            <select id="gpSelector" onchange="resetPageAndLoad()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="ALL">All Gram Panchayats</option>
+                            </select>
+                        </div>
+
+                        <div class="lg:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">3. Status Filter</label>
+                            <select id="statusFilter" onchange="resetPageAndLoad()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="ALL" selected>All Statuses</option>
+                                <option value="Not Applied">Not Applied</option>
+                                <option value="Approved">Approved</option>
+                                <option value="Portal Pending">Portal Pending</option>
+                                <option value="No Record Found">No Record Found</option>
+                                <option value="Not Traceable">Not Traceable</option>
+                                <option value="EXTRA_ONLY">✨ Extra Added Members Only</option>
+                            </select>
+                        </div>
+
+                        <div class="lg:col-span-4">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">4. Search Block (Name, Family ID, Mobile)</label>
+                            <div class="flex gap-2">
+                                <div class="relative w-full">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
+                                        </svg>
+                                    </span>
+                                    <input type="text" id="searchInput" onkeydown="if(event.key==='Enter') resetPageAndLoad()" placeholder="Paste Family ID, Name, or Mobile..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/80 focus:border-indigo-500 focus:bg-white focus:shadow-sm">
+                                </div>
+                                <button id="searchBtn" onclick="resetPageAndLoad()" class="group relative inline-flex items-center justify-center gap-2 px-5 py-2 btn-search-cool text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-500/25 hover:shadow-lg hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 shrink-0 overflow-hidden cursor-pointer">
+                                    <span class="absolute inset-0 w-full h-full btn-search-shimmer"></span>
+                                    <svg id="searchBtnIcon" class="w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
                                     </svg>
-                                </span>
-                                <input type="text" id="searchInput" onkeydown="if(event.key==='Enter') resetPageAndLoad()" placeholder="Paste Family ID, Name, or Mobile..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/80 focus:border-indigo-500 focus:bg-white focus:shadow-sm">
+                                    <span class="relative tracking-wide">Search</span>
+                                </button>
                             </div>
-                            <button id="searchBtn" onclick="resetPageAndLoad()" class="group relative inline-flex items-center justify-center gap-2 px-5 py-2 btn-search-cool text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-500/25 hover:shadow-lg hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 shrink-0 overflow-hidden cursor-pointer">
-                                <span class="absolute inset-0 w-full h-full btn-search-shimmer"></span>
-                                <svg id="searchBtnIcon" class="w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
-                                </svg>
-                                <span class="relative tracking-wide">Search</span>
+                        </div>
+                    </div>
+
+                    <!-- Live Block Summary Bar (7 Boxes: 6 Base + 1 Extra Added) -->
+                    <div id="blockSummaryBar" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 pt-2 border-t border-slate-100 text-xs"></div>
+                </div>
+
+                <!-- Family & Member List -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-3.5 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-50">
+                        <h3 class="font-bold text-slate-800 text-sm">Family & Member Verification List</h3>
+                        <div class="flex items-center gap-3">
+                            <span id="recordCount" class="text-xs font-semibold text-slate-600 bg-slate-200/80 px-2.5 py-1 rounded-md">Loading...</span>
+                            <button onclick="exportCampCallListExcel()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition">
+                                📥 Download List (.xlsx)
                             </button>
+                        </div>
+                    </div>
+
+                    <div class="divide-y divide-slate-200" id="familyListContainer">
+                        <div class="p-10 text-center text-slate-400 text-sm">Connecting to Supabase and loading records...</div>
+                    </div>
+
+                    <!-- Pagination Bar -->
+                    <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs font-semibold">
+                        <button onclick="changePage(-1)" id="prevBtn" class="px-3.5 py-1.5 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 disabled:opacity-40 transition">← Previous Page</button>
+                        <span id="pageIndicator" class="text-slate-700 font-bold">Page 1</span>
+                        <button onclick="changePage(1)" id="nextBtn" class="px-3.5 py-1.5 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 disabled:opacity-40 transition">Next Page →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW B: ACMO DISTRICT COMMAND VIEW -->
+            <div id="adminView" class="space-y-6 hidden">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-4 mb-5">
+                        <div>
+                            <span class="inline-block bg-purple-50 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-md mb-1 uppercase tracking-wider">District Nodal Control Center</span>
+                            <h2 class="text-xl font-bold text-slate-900">ACMO 22-Block Real-Time Command Dashboard</h2>
+                            <p class="text-sm text-slate-500">Official 70,673 base dataset protected with separate tracking for extra PM-JAY members.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="checkSpeedAnomalies()" class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition">Run Velocity Check</button>
+                            <button onclick="loadAdminLeaderboard()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition">Refresh Live Stats</button>
+                            <button onclick="exportLeaderboardExcel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm">📥 Download Leaderboard (.xlsx)</button>
+                        </div>
+                    </div>
+
+                    <div id="antiCheatBanner" class="hidden mb-4 p-4 rounded-xl border text-xs font-semibold"></div>
+
+                    <!-- District KPI Cards (6 Cards) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
+                        <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl">
+                            <p class="text-xs font-semibold text-slate-500 uppercase">Base District Target</p>
+                            <p class="text-2xl font-black text-slate-900 mt-1" id="statTotalMembers">70,673</p>
+                            <p class="text-xs text-slate-500 mt-1" id="statTotalFamilies">17,922 Families &bull; 22 Blocks</p>
+                        </div>
+                        <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl">
+                            <p class="text-xs font-semibold text-emerald-700 uppercase">Approved (Base)</p>
+                            <p class="text-2xl font-black text-emerald-900 mt-1" id="statApproved">--</p>
+                            <p class="text-xs text-emerald-700 mt-1 font-medium" id="statApprovedPct">Calculating...</p>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl">
+                            <p class="text-xs font-semibold text-amber-700 uppercase">Portal Pending</p>
+                            <p class="text-2xl font-black text-amber-900 mt-1" id="statPending">--</p>
+                            <p class="text-xs text-amber-700 mt-1">Awaiting approval</p>
+                        </div>
+                        <div class="bg-slate-100 border border-slate-300 p-4 rounded-xl">
+                            <p class="text-xs font-semibold text-slate-700 uppercase">Not Applied</p>
+                            <p class="text-2xl font-black text-slate-900 mt-1" id="statNotApplied">--</p>
+                            <p class="text-xs text-slate-600 mt-1">Actionable camp target</p>
+                        </div>
+                        <div class="bg-rose-50 border border-rose-200 p-4 rounded-xl">
+                            <p class="text-xs font-semibold text-rose-700 uppercase">No Record + Not Traceable</p>
+                            <p class="text-2xl font-black text-rose-900 mt-1" id="statOther">--</p>
+                            <p class="text-xs text-rose-700 mt-1">Audited & Excluded</p>
+                        </div>
+                        <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-xl">
+                            <p class="text-xs font-semibold text-indigo-700 uppercase">+ Extra Added</p>
+                            <p class="text-2xl font-black text-indigo-900 mt-1" id="statExtraAdded">--</p>
+                            <p class="text-xs text-indigo-700 mt-1">New PM-JAY members</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Live Block Summary Bar (7 Boxes: 6 Base + 1 Extra Added) -->
-                <div id="blockSummaryBar" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 pt-2 border-t border-slate-100 text-xs"></div>
-            </div>
-
-            <!-- Family & Member List -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-6 py-3.5 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-50">
-                    <h3 class="font-bold text-slate-800 text-sm">Family & Member Verification List</h3>
-                    <div class="flex items-center gap-3">
-                        <span id="recordCount" class="text-xs font-semibold text-slate-600 bg-slate-200/80 px-2.5 py-1 rounded-md">Loading...</span>
-                        <button onclick="exportCampCallListExcel()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition">
-                            📥 Download List (.xlsx)
-                        </button>
+                <!-- 22-Block Live Leaderboard Table -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-800 text-sm">22-Block Live Performance Leaderboard</h3>
+                        <span class="text-xs text-slate-500">Click any Block row to open its DEO Terminal</span>
                     </div>
-                </div>
-
-                <div class="divide-y divide-slate-200" id="familyListContainer">
-                    <div class="p-10 text-center text-slate-400 text-sm">Connecting to Supabase and loading records...</div>
-                </div>
-
-                <!-- Pagination Bar -->
-                <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs font-semibold">
-                    <button onclick="changePage(-1)" id="prevBtn" class="px-3.5 py-1.5 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 disabled:opacity-40 transition">← Previous Page</button>
-                    <span id="pageIndicator" class="text-slate-700 font-bold">Page 1</span>
-                    <button onclick="changePage(1)" id="nextBtn" class="px-3.5 py-1.5 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 disabled:opacity-40 transition">Next Page →</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- VIEW B: ACMO DISTRICT COMMAND VIEW -->
-        <div id="adminView" class="space-y-6 hidden">
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-4 mb-5">
-                    <div>
-                        <span class="inline-block bg-purple-50 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-md mb-1 uppercase tracking-wider">District Nodal Control Center</span>
-                        <h2 class="text-xl font-bold text-slate-900">ACMO 22-Block Real-Time Command Dashboard</h2>
-                        <p class="text-sm text-slate-500">Official 70,673 base dataset protected with separate tracking for extra PM-JAY members.</p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <button onclick="checkSpeedAnomalies()" class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition">Run Velocity Check</button>
-                        <button onclick="loadAdminLeaderboard()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition">Refresh Live Stats</button>
-                        <button onclick="exportLeaderboardExcel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm">📥 Download Leaderboard (.xlsx)</button>
-                    </div>
-                </div>
-
-                <div id="antiCheatBanner" class="hidden mb-4 p-4 rounded-xl border text-xs font-semibold"></div>
-
-                <!-- District KPI Cards (6 Cards) -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
-                    <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl">
-                        <p class="text-xs font-semibold text-slate-500 uppercase">Base District Target</p>
-                        <p class="text-2xl font-black text-slate-900 mt-1" id="statTotalMembers">70,673</p>
-                        <p class="text-xs text-slate-500 mt-1" id="statTotalFamilies">17,922 Families &bull; 22 Blocks</p>
-                    </div>
-                    <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl">
-                        <p class="text-xs font-semibold text-emerald-700 uppercase">Approved (Base)</p>
-                        <p class="text-2xl font-black text-emerald-900 mt-1" id="statApproved">--</p>
-                        <p class="text-xs text-emerald-700 mt-1 font-medium" id="statApprovedPct">Calculating...</p>
-                    </div>
-                    <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl">
-                        <p class="text-xs font-semibold text-amber-700 uppercase">Portal Pending</p>
-                        <p class="text-2xl font-black text-amber-900 mt-1" id="statPending">--</p>
-                        <p class="text-xs text-amber-700 mt-1">Awaiting approval</p>
-                    </div>
-                    <div class="bg-slate-100 border border-slate-300 p-4 rounded-xl">
-                        <p class="text-xs font-semibold text-slate-700 uppercase">Not Applied</p>
-                        <p class="text-2xl font-black text-slate-900 mt-1" id="statNotApplied">--</p>
-                        <p class="text-xs text-slate-600 mt-1">Actionable camp target</p>
-                    </div>
-                    <div class="bg-rose-50 border border-rose-200 p-4 rounded-xl">
-                        <p class="text-xs font-semibold text-rose-700 uppercase">No Record + Not Traceable</p>
-                        <p class="text-2xl font-black text-rose-900 mt-1" id="statOther">--</p>
-                        <p class="text-xs text-rose-700 mt-1">Audited & Excluded</p>
-                    </div>
-                    <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-xl">
-                        <p class="text-xs font-semibold text-indigo-700 uppercase">+ Extra Added</p>
-                        <p class="text-2xl font-black text-indigo-900 mt-1" id="statExtraAdded">--</p>
-                        <p class="text-xs text-indigo-700 mt-1">New PM-JAY members</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 bg-slate-100 text-slate-600 text-xs uppercase font-bold">
+                                    <th class="p-3.5">Rank & Block</th>
+                                    <th class="p-3.5 text-right">Families</th>
+                                    <th class="p-3.5 text-right">Base Members</th>
+                                    <th class="p-3.5 text-right text-emerald-700">Approved</th>
+                                    <th class="p-3.5 text-right text-amber-700">Portal Pending</th>
+                                    <th class="p-3.5 text-right text-slate-700">Not Applied</th>
+                                    <th class="p-3.5 text-right text-purple-700">No Record</th>
+                                    <th class="p-3.5 text-right text-rose-700">Not Traceable</th>
+                                    <th class="p-3.5 text-right text-indigo-700">+ Extra Added</th>
+                                    <th class="p-3.5 w-36">Completion Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboardTableBody" class="divide-y divide-slate-100 text-sm">
+                                <tr><td colspan="10" class="p-8 text-center text-slate-400">Loading 22-block statistics from Supabase...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
 
-            <!-- 22-Block Live Leaderboard Table -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-                    <h3 class="font-bold text-slate-800 text-sm">22-Block Live Performance Leaderboard</h3>
-                    <span class="text-xs text-slate-500">Click any Block row to open its DEO Terminal</span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-200 bg-slate-100 text-slate-600 text-xs uppercase font-bold">
-                                <th class="p-3.5">Rank & Block</th>
-                                <th class="p-3.5 text-right">Families</th>
-                                <th class="p-3.5 text-right">Base Members</th>
-                                <th class="p-3.5 text-right text-emerald-700">Approved</th>
-                                <th class="p-3.5 text-right text-amber-700">Portal Pending</th>
-                                <th class="p-3.5 text-right text-slate-700">Not Applied</th>
-                                <th class="p-3.5 text-right text-purple-700">No Record</th>
-                                <th class="p-3.5 text-right text-rose-700">Not Traceable</th>
-                                <th class="p-3.5 text-right text-indigo-700">+ Extra Added</th>
-                                <th class="p-3.5 w-36">Completion Rate</th>
-                            </tr>
-                        </thead>
-                        <tbody id="leaderboardTableBody" class="divide-y divide-slate-100 text-sm">
-                            <tr><td colspan="10" class="p-8 text-center text-slate-400">Loading 22-block statistics from Supabase...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        </main>
 
-    </main>
+        <!-- Footer -->
+        <footer class="bg-slate-900 text-slate-400 py-4 text-center text-xs mt-auto">
+            <p>BoCW District Execution Portal &bull; Azamgarh Administration &bull; Powered by Supabase & Cloudflare Pages</p>
+        </footer>
 
-    <!-- Footer -->
-    <footer class="bg-slate-900 text-slate-400 py-4 text-center text-xs mt-auto">
-        <p>BoCW District Execution Portal &bull; Azamgarh Administration &bull; Powered by Supabase & Cloudflare Pages</p>
-    </footer>
+    </div>
 
     <!-- Application Scripts (Segregated by Responsibility) -->
     <script src="js/config.js"></script>
     <script src="js/state.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/deo.js"></script>
     <script src="js/admin.js"></script>

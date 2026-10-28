@@ -4,6 +4,7 @@
  * ============================================================================
  */
 
+let currentSession = null;
 let currentLoadedRecords = [];
 let cachedLeaderboard = [];
 let currentPage = 1;

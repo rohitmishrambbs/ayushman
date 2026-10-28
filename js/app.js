@@ -5,11 +5,49 @@
  */
 
 document.addEventListener("DOMContentLoaded", async () => {
-    await loadGPDropdown();
-    await loadBlockData();
+    const saved = getSavedSession();
+    if (saved) {
+        currentSession = saved;
+        await initializeAuthenticatedApp();
+    } else {
+        document.getElementById('appShell').classList.add('hidden');
+        document.getElementById('loginScreen').classList.remove('hidden');
+        setTimeout(() => {
+            const u = document.getElementById('loginUsername');
+            if (u) u.focus();
+        }, 50);
+    }
 });
 
+async function initializeAuthenticatedApp() {
+    const session = getSavedSession();
+    if (!session) return;
+
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('appShell').classList.remove('hidden');
+
+    configureBlockSelectorForSession(session);
+
+    if (session.role === 'admin') {
+        document.getElementById('roleSelector').value = 'admin';
+        document.getElementById('deoView').classList.add('hidden');
+        document.getElementById('adminView').classList.remove('hidden');
+        await loadAdminLeaderboard();
+        await loadGPDropdown();
+        await loadBlockData();
+    } else {
+        document.getElementById('deoView').classList.remove('hidden');
+        document.getElementById('adminView').classList.add('hidden');
+        await loadGPDropdown();
+        await loadBlockData();
+    }
+}
+
 function switchRole(role) {
+    if (role === 'admin' && !isMasterAdmin()) {
+        return;
+    }
+
     document.getElementById('roleSelector').value = role;
     if (role === 'admin') {
         document.getElementById('deoView').classList.add('hidden');
@@ -22,7 +60,9 @@ function switchRole(role) {
 }
 
 async function onBlockChange() {
-    const block = document.getElementById('blockSelector').value;
+    const block = getAuthorizedBlock();
+    if (!block) return;
+
     document.getElementById('activeBlockTitle').innerText = `${block} Block Terminal`;
     document.getElementById('searchInput').value = '';
     currentPage = 1;
