@@ -60,6 +60,18 @@ function getAuthorizedBlock() {
     return selector ? selector.value : 'MOHAMMADPUR';
 }
 
+function showLoginError(msg) {
+    const errorBox = document.getElementById('loginErrorBox');
+    const errorText = document.getElementById('loginErrorText');
+    if (!errorBox) return;
+    if (errorText) {
+        errorText.innerText = msg;
+    } else {
+        errorBox.innerText = msg;
+    }
+    errorBox.classList.remove('hidden');
+}
+
 async function handleLoginSubmit(event) {
     if (event) event.preventDefault();
 
@@ -68,21 +80,21 @@ async function handleLoginSubmit(event) {
     const errorBox = document.getElementById('loginErrorBox');
     const submitBtn = document.getElementById('loginSubmitBtn');
     const submitText = document.getElementById('loginSubmitText');
+    const spinner = document.getElementById('loginSpinner');
 
     const username = (usernameInput.value || '').trim().toUpperCase();
     const password = (passwordInput.value || '').trim();
 
-    errorBox.classList.add('hidden');
-    errorBox.innerText = '';
+    if (errorBox) errorBox.classList.add('hidden');
 
     if (!username || !password) {
-        errorBox.innerText = 'Please enter both User ID and Password.';
-        errorBox.classList.remove('hidden');
+        showLoginError('Please enter both User ID and Password.');
         return;
     }
 
     try {
         submitBtn.disabled = true;
+        if (spinner) spinner.classList.remove('hidden');
         submitText.innerText = 'Verifying Credentials...';
 
         const { data, error } = await supabaseClient.rpc('authenticate_portal_user', {
@@ -97,8 +109,7 @@ async function handleLoginSubmit(event) {
         const userRow = Array.isArray(data) ? data[0] : data;
 
         if (!userRow || !userRow.username) {
-            errorBox.innerText = 'Invalid User ID or Password. Please check your credentials.';
-            errorBox.classList.remove('hidden');
+            showLoginError('Invalid User ID or Password. Please check your credentials.');
             passwordInput.value = '';
             passwordInput.focus();
             return;
@@ -116,13 +127,14 @@ async function handleLoginSubmit(event) {
         currentSession = sessionData;
         passwordInput.value = '';
 
+        showToast(`Welcome, ${sessionData.display_name}!`, 'success');
         await initializeAuthenticatedApp();
     } catch (err) {
         console.error('Login error:', err);
-        errorBox.innerText = `Authentication Error: ${err.message || 'Unable to verify credentials on Supabase.'}`;
-        errorBox.classList.remove('hidden');
+        showLoginError(`Authentication Error: ${err.message || 'Unable to verify credentials on Supabase.'}`);
     } finally {
         submitBtn.disabled = false;
+        if (spinner) spinner.classList.add('hidden');
         submitText.innerText = 'Sign In to Portal';
     }
 }
@@ -145,6 +157,8 @@ function logoutPortalUser() {
     if (errorBox) errorBox.classList.add('hidden');
     if (passwordInput) passwordInput.value = '';
     if (usernameInput) usernameInput.focus();
+
+    showToast('Signed out successfully', 'info', 2000);
 }
 
 function configureBlockSelectorForSession(session) {
@@ -163,7 +177,7 @@ function configureBlockSelectorForSession(session) {
 
         if (modeSwitcher) modeSwitcher.classList.add('hidden');
         if (userBadge) {
-            userBadge.innerHTML = `<span>🔒 DEO: ${session.assigned_block}</span>`;
+            userBadge.innerHTML = `<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-400"></span>🔒 DEO: ${session.assigned_block}</span>`;
         }
     } else {
         // Master Admin (ACMO) - Populate all 22 blocks
@@ -176,7 +190,7 @@ function configureBlockSelectorForSession(session) {
 
         if (modeSwitcher) modeSwitcher.classList.remove('hidden');
         if (userBadge) {
-            userBadge.innerHTML = `<span>🛡️ ACMO MASTER</span>`;
+            userBadge.innerHTML = `<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400"></span>🛡️ ACMO MASTER</span>`;
         }
     }
 }

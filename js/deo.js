@@ -29,6 +29,19 @@ async function loadGPDropdown() {
     }
 }
 
+function renderSkeletonLoader() {
+    return `
+        <div class="p-6 space-y-4 animate-pulse">
+            <div class="h-6 skeleton-box w-1/3"></div>
+            <div class="space-y-3">
+                <div class="h-16 skeleton-box w-full"></div>
+                <div class="h-16 skeleton-box w-full"></div>
+                <div class="h-16 skeleton-box w-full"></div>
+            </div>
+        </div>
+    `;
+}
+
 async function loadBlockData() {
     const block = getAuthorizedBlock();
     if (!block) return;
@@ -43,7 +56,7 @@ async function loadBlockData() {
 
     try {
         statusText.innerText = "Fetching Cloud Data...";
-        container.innerHTML = `<div class="p-10 text-center text-slate-400 text-sm">Loading records for <b>${block}</b>...</div>`;
+        container.innerHTML = renderSkeletonLoader();
 
         let query = supabaseClient
             .from('bocw_members')
@@ -83,17 +96,28 @@ async function loadBlockData() {
         renderFamilyGroups(currentLoadedRecords, count || 0);
         updatePaginationControls(count || 0);
         updateBlockSummaryBar(block);
-        statusText.innerText = "Synced with Cloud DB";
+        statusText.innerText = "✓ Synced with Cloud DB";
     } catch (err) {
         console.error("Database fetch error:", err);
         container.innerHTML = `<div class="p-8 text-center text-rose-600 text-sm font-bold">Database Query Error: ${err.message}</div>`;
         statusText.innerText = "Query Error";
+        showToast(`Query Error: ${err.message}`, 'error');
     }
+}
+
+function quickFilterStatus(statusVal) {
+    const statusSelect = document.getElementById('statusFilter');
+    if (!statusSelect) return;
+    statusSelect.value = statusVal;
+    resetPageAndLoad();
+    showToast(`Filtering by: ${statusVal === 'ALL' ? 'All Statuses' : statusVal}`, 'info', 2000);
 }
 
 async function updateBlockSummaryBar(block) {
     const authorizedBlock = getAuthorizedBlock() || block;
     const bar = document.getElementById('blockSummaryBar');
+    if (!bar) return;
+
     try {
         const { data, error } = await supabaseClient.rpc('get_block_leaderboard');
         if (error || !data) return;
@@ -103,35 +127,66 @@ async function updateBlockSummaryBar(block) {
 
         const notAppliedTotal = Number(row.not_applied_members || 0) + Number(row.unidentified_members || 0);
         const extraTotal = Number(row.extra_added_members || 0);
+        const currentFilter = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : 'ALL';
 
         bar.innerHTML = `
-            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                <span class="block text-slate-500 font-bold uppercase text-[10px]">Base Total</span>
-                <span class="font-black text-slate-900 text-sm">${Number(row.total_members || 0).toLocaleString()} <span class="font-normal text-xs text-slate-500">(${Number(row.total_families || 0).toLocaleString()} Fam)</span></span>
+            <div onclick="quickFilterStatus('ALL')" title="Click to show all records" class="summary-stat-box bg-slate-50 p-3 rounded-xl border ${currentFilter === 'ALL' ? 'ring-2 ring-slate-800 border-slate-400' : 'border-slate-200'}">
+                <div class="flex items-center justify-between">
+                    <span class="block text-slate-500 font-bold uppercase text-[10px]">Base Total</span>
+                    <span class="text-xs text-slate-400">📋</span>
+                </div>
+                <div class="mt-1 flex items-baseline gap-1">
+                    <span class="font-black text-slate-900 text-base font-mono">${Number(row.total_members || 0).toLocaleString()}</span>
+                    <span class="font-normal text-[11px] text-slate-500">(${Number(row.total_families || 0).toLocaleString()} Fam)</span>
+                </div>
             </div>
-            <div class="bg-emerald-50 p-2.5 rounded-lg border border-emerald-200">
-                <span class="block text-emerald-700 font-bold uppercase text-[10px]">Approved</span>
-                <span class="font-black text-emerald-900 text-sm">${Number(row.approved_members || 0).toLocaleString()}</span>
+
+            <div onclick="quickFilterStatus('Approved')" title="Click to filter Approved" class="summary-stat-box bg-emerald-50/80 p-3 rounded-xl border ${currentFilter === 'Approved' ? 'ring-2 ring-emerald-600 border-emerald-400' : 'border-emerald-200'}">
+                <div class="flex items-center justify-between">
+                    <span class="block text-emerald-800 font-bold uppercase text-[10px]">Approved</span>
+                    <span class="text-xs text-emerald-600">✓</span>
+                </div>
+                <span class="font-black text-emerald-900 text-base font-mono block mt-1">${Number(row.approved_members || 0).toLocaleString()}</span>
             </div>
-            <div class="bg-amber-50 p-2.5 rounded-lg border border-amber-200">
-                <span class="block text-amber-700 font-bold uppercase text-[10px]">Portal Pending</span>
-                <span class="font-black text-amber-900 text-sm">${Number(row.pending_members || 0).toLocaleString()}</span>
+
+            <div onclick="quickFilterStatus('Portal Pending')" title="Click to filter Portal Pending" class="summary-stat-box bg-amber-50/80 p-3 rounded-xl border ${currentFilter === 'Portal Pending' ? 'ring-2 ring-amber-600 border-amber-400' : 'border-amber-200'}">
+                <div class="flex items-center justify-between">
+                    <span class="block text-amber-800 font-bold uppercase text-[10px]">Portal Pending</span>
+                    <span class="text-xs text-amber-600">⏳</span>
+                </div>
+                <span class="font-black text-amber-900 text-base font-mono block mt-1">${Number(row.pending_members || 0).toLocaleString()}</span>
             </div>
-            <div class="bg-slate-100 p-2.5 rounded-lg border border-slate-300">
-                <span class="block text-slate-700 font-bold uppercase text-[10px]">Not Applied</span>
-                <span class="font-black text-slate-900 text-sm">${notAppliedTotal.toLocaleString()}</span>
+
+            <div onclick="quickFilterStatus('Not Applied')" title="Click to filter Not Applied" class="summary-stat-box bg-slate-100 p-3 rounded-xl border ${currentFilter === 'Not Applied' ? 'ring-2 ring-slate-700 border-slate-400' : 'border-slate-300'}">
+                <div class="flex items-center justify-between">
+                    <span class="block text-slate-700 font-bold uppercase text-[10px]">Not Applied</span>
+                    <span class="text-xs text-slate-500">⚪</span>
+                </div>
+                <span class="font-black text-slate-900 text-base font-mono block mt-1">${notAppliedTotal.toLocaleString()}</span>
             </div>
-            <div class="bg-purple-50 p-2.5 rounded-lg border border-purple-200">
-                <span class="block text-purple-700 font-bold uppercase text-[10px]">No Record Found</span>
-                <span class="font-black text-purple-900 text-sm">${Number(row.no_record_members || 0).toLocaleString()}</span>
+
+            <div onclick="quickFilterStatus('No Record Found')" title="Click to filter No Record Found" class="summary-stat-box bg-purple-50/80 p-3 rounded-xl border ${currentFilter === 'No Record Found' ? 'ring-2 ring-purple-600 border-purple-400' : 'border-purple-200'}">
+                <div class="flex items-center justify-between">
+                    <span class="block text-purple-800 font-bold uppercase text-[10px]">No Record</span>
+                    <span class="text-xs text-purple-600">❓</span>
+                </div>
+                <span class="font-black text-purple-900 text-base font-mono block mt-1">${Number(row.no_record_members || 0).toLocaleString()}</span>
             </div>
-            <div class="bg-rose-50 p-2.5 rounded-lg border border-rose-200">
-                <span class="block text-rose-700 font-bold uppercase text-[10px]">Not Traceable</span>
-                <span class="font-black text-rose-900 text-sm">${Number(row.not_traceable_members || 0).toLocaleString()}</span>
+
+            <div onclick="quickFilterStatus('Not Traceable')" title="Click to filter Not Traceable" class="summary-stat-box bg-rose-50/80 p-3 rounded-xl border ${currentFilter === 'Not Traceable' ? 'ring-2 ring-rose-600 border-rose-400' : 'border-rose-200'}">
+                <div class="flex items-center justify-between">
+                    <span class="block text-rose-800 font-bold uppercase text-[10px]">Not Traceable</span>
+                    <span class="text-xs text-rose-600">✕</span>
+                </div>
+                <span class="font-black text-rose-900 text-base font-mono block mt-1">${Number(row.not_traceable_members || 0).toLocaleString()}</span>
             </div>
-            <div class="bg-indigo-50 p-2.5 rounded-lg border border-indigo-200">
-                <span class="block text-indigo-700 font-bold uppercase text-[10px]">+ Extra Added</span>
-                <span class="font-black text-indigo-900 text-sm">${extraTotal.toLocaleString()}</span>
+
+            <div onclick="quickFilterStatus('EXTRA_ONLY')" title="Click to filter Extra Added" class="summary-stat-box bg-indigo-50/80 p-3 rounded-xl border ${currentFilter === 'EXTRA_ONLY' ? 'ring-2 ring-indigo-600 border-indigo-400' : 'border-indigo-200'}">
+                <div class="flex items-center justify-between">
+                    <span class="block text-indigo-800 font-bold uppercase text-[10px]">+ Extra Added</span>
+                    <span class="text-xs text-indigo-600">✨</span>
+                </div>
+                <span class="font-black text-indigo-900 text-base font-mono block mt-1">+${extraTotal.toLocaleString()}</span>
             </div>
         `;
     } catch (e) {
@@ -150,7 +205,8 @@ async function confirmAddMember() {
     const statusText = document.getElementById('syncStatusText');
 
     if (!nameInput) {
-        alert("Please enter the Member Name.");
+        showToast("Please enter the Member Name.", "warning");
+        document.getElementById('newMemberName').focus();
         return;
     }
 
@@ -183,9 +239,10 @@ async function confirmAddMember() {
         closeAddMemberModal();
         renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
         updateBlockSummaryBar(block);
-        statusText.innerText = `Added ${nameInput}`;
+        statusText.innerText = `✓ Added ${nameInput}`;
+        showToast(`Member "${nameInput}" added to Family ${newRecord.family_id}`, "success");
     } catch (err) {
-        alert(`Could not add member: ${err.message}`);
+        showToast(`Could not add member: ${err.message}`, "error");
         statusText.innerText = "Add Failed";
     } finally {
         saveBtn.disabled = false;
@@ -213,9 +270,10 @@ async function deleteExtraMember(internalMemberId, memberName) {
         currentLoadedRecords = currentLoadedRecords.filter(r => String(r.member_id) !== String(internalMemberId));
         renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
         updateBlockSummaryBar(block);
-        statusText.innerText = "Removed Extra Member";
+        statusText.innerText = "✓ Removed Extra Member";
+        showToast(`Removed member "${memberName}"`, "info");
     } catch (err) {
-        alert(`Failed to remove member: ${err.message}`);
+        showToast(`Failed to remove member: ${err.message}`, "error");
         statusText.innerText = "Delete Error";
     }
 }
@@ -295,11 +353,12 @@ async function saveMemberStatus(memberId, status, remark) {
             rec.remark = remark;
         }
 
-        statusText.innerText = `Saved Status`;
+        statusText.innerText = `✓ Saved Status`;
         renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
         updateBlockSummaryBar(block);
+        showToast(`Updated status: ${status}`, status === 'Approved' ? 'success' : 'info', 1800);
     } catch (err) {
-        alert(`Failed to save status: ${err.message}`);
+        showToast(`Failed to save status: ${err.message}`, "error");
         statusText.innerText = "Save Failed";
     }
 }
@@ -343,11 +402,12 @@ async function saveFamilyStatus(familyId, status, remark) {
             }
         });
 
-        statusText.innerText = `Saved Family ${familyId}`;
+        statusText.innerText = `✓ Saved Family ${familyId}`;
         renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
         updateBlockSummaryBar(block);
+        showToast(`Family ${familyId} marked as ${status}`, status === 'Approved' ? 'success' : 'info', 2200);
     } catch (err) {
-        alert(`Failed to update Family: ${err.message}`);
+        showToast(`Failed to update Family: ${err.message}`, "error");
         statusText.innerText = "Save Failed";
     }
 }

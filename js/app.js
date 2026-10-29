@@ -64,7 +64,11 @@ async function onBlockChange() {
     if (!block) return;
 
     document.getElementById('activeBlockTitle').innerText = `${block} Block Terminal`;
-    document.getElementById('searchInput').value = '';
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
+    const clearBtn = document.getElementById('clearSearchBtn');
+    if (clearBtn) clearBtn.classList.add('hidden');
+
     currentPage = 1;
     await loadGPDropdown();
     await loadBlockData();

@@ -5,71 +5,149 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BoCW District Monitoring & Execution Portal - Azamgarh</title>
 
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <!-- External Vendor Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- Custom Stylesheet -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+<body class="bg-slate-50/80 text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+    <!-- ================= FLOATING TOAST NOTIFICATION CONTAINER ================= -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-[100] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-3"></div>
+
+    <!-- ================= FLOATING SCROLL TO TOP BUTTON ================= -->
+    <button id="scrollToTopBtn" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" title="Scroll to top" class="fixed bottom-6 left-6 z-40 p-3 bg-white/90 backdrop-blur border border-slate-300 text-slate-700 hover:text-indigo-600 rounded-full shadow-lg transition-all cursor-pointer">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+        </svg>
+    </button>
 
     <!-- ================= SECURE LOGIN SCREEN ================= -->
-    <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden">
-            <div class="bg-slate-900 px-6 py-5 text-white border-b border-slate-800">
-                <div class="flex items-center gap-3">
-                    <div class="bg-indigo-600 px-3 py-2 rounded-xl font-black text-lg tracking-wider shadow-md">BoCW</div>
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-4 relative overflow-hidden">
+        <!-- Subtle Background Glow Orbs -->
+        <div class="absolute -top-32 -left-32 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40 border border-slate-200/80 max-w-md w-full overflow-hidden transition-all duration-300 relative z-10 animate-fade-in">
+            <!-- Header Banner -->
+            <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-6 py-6 text-white border-b border-indigo-900/50">
+                <div class="flex items-center gap-3.5">
+                    <div class="bg-gradient-to-tr from-indigo-600 to-indigo-500 p-3 rounded-xl font-black text-xl tracking-wider shadow-lg shadow-indigo-500/30 flex items-center justify-center ring-2 ring-white/10">
+                        BoCW
+                    </div>
                     <div>
-                        <h1 class="font-bold text-base leading-tight">Azamgarh Monitoring Portal</h1>
-                        <p class="text-xs text-slate-400 mt-0.5">Authorized Block DEO &amp; ACMO Command Access</p>
+                        <div class="flex items-center gap-2">
+                            <h1 class="font-bold text-base tracking-tight text-white">Azamgarh Monitoring Portal</h1>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Official</span>
+                        </div>
+                        <p class="text-xs text-slate-300/80 mt-0.5">Authorized Block DEO &amp; ACMO Command Center</p>
                     </div>
                 </div>
             </div>
 
+            <!-- Login Form -->
             <form onsubmit="handleLoginSubmit(event)" class="p-6 space-y-4">
-                <div id="loginErrorBox" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold"></div>
+                <div id="loginErrorBox" class="hidden p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-start gap-2.5">
+                    <span class="text-rose-500 text-base leading-none">⚠️</span>
+                    <span id="loginErrorText" class="flex-1"></span>
+                </div>
 
                 <div>
-                    <label for="loginUsername" class="block text-xs font-bold text-slate-700 uppercase mb-1.5">User ID (Block DEO / ACMO)</label>
-                    <input
-                        type="text"
-                        id="loginUsername"
-                        autocomplete="username"
-                        placeholder="e.g. DEO_MOHAMMADPUR or ACMO_AZAMGARH"
-                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
-                        required
-                    >
+                    <label for="loginUsername" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        User ID (Block DEO / ACMO)
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                        </span>
+                        <input
+                            type="text"
+                            id="loginUsername"
+                            autocomplete="username"
+                            placeholder="e.g. DEO_MOHAMMADPUR or ACMO_AZAMGARH"
+                            class="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500/80 focus:border-indigo-500 focus:bg-white transition-all shadow-sm"
+                            required
+                        >
+                    </div>
                 </div>
 
                 <div>
                     <div class="flex justify-between items-center mb-1.5">
-                        <label for="loginPassword" class="block text-xs font-bold text-slate-700 uppercase">Password</label>
-                        <button type="button" onclick="togglePasswordVisibility()" id="passwordEyeLabel" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">Show</button>
+                        <label for="loginPassword" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                            Password
+                        </label>
+                        <button type="button" onclick="togglePasswordVisibility()" class="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition">
+                            <span id="passwordEyeLabel">Show</span>
+                        </button>
                     </div>
-                    <input
-                        type="password"
-                        id="loginPassword"
-                        autocomplete="current-password"
-                        placeholder="Enter your assigned password..."
-                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
-                        required
-                    >
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </span>
+                        <input
+                            type="password"
+                            id="loginPassword"
+                            autocomplete="current-password"
+                            placeholder="Enter your assigned password..."
+                            class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/80 focus:border-indigo-500 focus:bg-white transition-all shadow-sm"
+                            required
+                        >
+                    </div>
                 </div>
 
                 <button
                     type="submit"
                     id="loginSubmitBtn"
-                    class="group relative w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 btn-search-cool text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-500/25 hover:shadow-lg hover:shadow-indigo-500/40 active:scale-95 transition-all cursor-pointer overflow-hidden"
+                    class="group relative w-full inline-flex items-center justify-center gap-2 px-5 py-3 btn-search-cool text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 active:scale-[0.98] transition-all cursor-pointer overflow-hidden mt-2"
                 >
                     <span class="absolute inset-0 w-full h-full btn-search-shimmer"></span>
-                    <span id="loginSubmitText" class="relative tracking-wide">Sign In to Portal</span>
+                    <svg id="loginSpinner" class="hidden w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span id="loginSubmitText" class="relative tracking-wide font-bold">Sign In to Portal</span>
+                    <span class="relative">→</span>
                 </button>
 
-                <p class="text-[11px] text-center text-slate-400 pt-1">
-                    Block DEOs are restricted to their assigned block data.
-                </p>
+                <div class="pt-2">
+                    <p class="text-[11px] text-center text-slate-400 leading-relaxed">
+                        🔒 Authorized official access only. Block DEOs are restricted to their assigned block data.
+                    </p>
+                </div>
             </form>
         </div>
     </div>
@@ -77,52 +155,71 @@
     <!-- ================= AUTHENTICATED APPLICATION SHELL ================= -->
     <div id="appShell" class="hidden min-h-screen flex flex-col">
 
-        <!-- ================= ADD EXTRA MEMBER MODAL (ONLY NAME & STATUS) ================= -->
-        <div id="addMemberModal" class="fixed inset-0 bg-slate-900/75 modal-backdrop z-50 hidden flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-slate-200">
-                <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <!-- ================= ADD EXTRA MEMBER MODAL ================= -->
+        <div id="addMemberModal" onclick="if(event.target===this) closeAddMemberModal()" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 modal-content-animated relative">
+                <div class="flex justify-between items-start border-b border-slate-100 pb-3">
                     <div>
-                        <h3 class="font-bold text-slate-900 text-base">Add Extra PM-JAY Family Member</h3>
-                        <p class="text-xs text-indigo-600 font-mono font-bold mt-0.5" id="addModalFamilyLabel">Family ID: --</p>
+                        <div class="flex items-center gap-2">
+                            <span class="p-1 rounded-lg bg-indigo-50 text-indigo-600 text-sm">✨</span>
+                            <h3 class="font-bold text-slate-900 text-base">Add Extra PM-JAY Member</h3>
+                        </div>
+                        <p class="text-xs text-indigo-600 font-mono font-bold mt-1" id="addModalFamilyLabel">Family ID: --</p>
                     </div>
-                    <button onclick="closeAddMemberModal()" class="text-slate-400 hover:text-slate-600 text-sm font-bold">✕</button>
+                    <button onclick="closeAddMemberModal()" title="Close (Esc)" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-sm font-bold transition">✕</button>
                 </div>
 
-                <div class="space-y-3.5">
+                <div class="space-y-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">1. Member Name (सदस्य का नाम) *</label>
-                        <input type="text" id="newMemberName" placeholder="Enter member name as on PM-JAY portal..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white" onkeydown="if(event.key==='Enter') confirmAddMember()">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">1. Member Name (सदस्य का नाम) *</label>
+                        <input
+                            type="text"
+                            id="newMemberName"
+                            placeholder="Enter member name as on PM-JAY portal..."
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+                            onkeydown="if(event.key==='Enter') confirmAddMember()"
+                        >
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">2. Card Status (कार्ड की स्थिति) *</label>
-                        <select id="newMemberStatus" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="Approved" selected>Approved</option>
-                            <option value="Portal Pending">Portal Pending</option>
-                            <option value="Not Applied">Not Applied</option>
-                            <option value="No Record Found">No Record Found</option>
-                            <option value="Not Traceable">Not Traceable</option>
-                        </select>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">2. Card Status (कार्ड की स्थिति) *</label>
+                        <div class="relative">
+                            <select id="newMemberStatus" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition appearance-none">
+                                <option value="Approved" selected>Approved (स्वीकृत)</option>
+                                <option value="Portal Pending">Portal Pending (प्रक्रियाधीन)</option>
+                                <option value="Not Applied">Not Applied (आवेदन नहीं किया)</option>
+                                <option value="No Record Found">No Record Found (रिकॉर्ड नहीं मिला)</option>
+                                <option value="Not Traceable">Not Traceable (ट्रेस नहीं हुआ)</option>
+                            </select>
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">▼</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                    <button onclick="closeAddMemberModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition">Cancel</button>
-                    <button id="saveNewMemberBtn" onclick="confirmAddMember()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition">+ Save Member to Family</button>
+                <div class="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
+                    <button onclick="closeAddMemberModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer">Cancel</button>
+                    <button id="saveNewMemberBtn" onclick="confirmAddMember()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-500/20 active:scale-95 transition cursor-pointer">
+                        + Save Member to Family
+                    </button>
                 </div>
             </div>
         </div>
 
         <!-- ================= NOT TRACEABLE REASON MODAL ================= -->
-        <div id="reasonModal" class="fixed inset-0 bg-slate-900/75 modal-backdrop z-50 hidden flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-slate-200">
-                <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                    <h3 class="font-bold text-slate-900 text-base">Select 'Not Traceable' Reason</h3>
-                    <button onclick="closeReasonModal()" class="text-slate-400 hover:text-slate-600 text-sm font-bold">✕</button>
+        <div id="reasonModal" onclick="if(event.target===this) closeReasonModal()" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-rose-100 modal-content-animated relative">
+                <div class="flex justify-between items-start border-b border-slate-100 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="p-1 rounded-lg bg-rose-50 text-rose-600 text-sm">⚠️</span>
+                        <h3 class="font-bold text-slate-900 text-base">Select 'Not Traceable' Reason</h3>
+                    </div>
+                    <button onclick="closeReasonModal()" title="Close (Esc)" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-sm font-bold transition">✕</button>
                 </div>
-                <p class="text-xs text-slate-500" id="reasonModalSubtitle">Select verified field reason:</p>
+
+                <p class="text-xs text-slate-600 font-medium" id="reasonModalSubtitle">Select verified field reason:</p>
+
                 <div>
-                    <select id="reasonDropdown" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    <select id="reasonDropdown" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white transition leading-relaxed">
                         <option value="Deceased / Death (मृत्यु)">1. Deceased / Death (मृत्यु)</option>
                         <option value="Permanent Migration / Out of District (स्थायी पलायन)">2. Permanent Migration / Out of District (स्थायी पलायन)</option>
                         <option value="Married Out of Block (विवाह पश्चात स्थानांतरण)">3. Married Out of Block (विवाह पश्चात स्थानांतरण)</option>
@@ -131,44 +228,65 @@
                         <option value="Refused eKYC (लाभार्थी द्वारा इंकार)">6. Refused eKYC (लाभार्थी द्वारा इंकार)</option>
                     </select>
                 </div>
-                <div class="flex justify-end gap-2 pt-2">
-                    <button onclick="closeReasonModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition">Cancel</button>
-                    <button onclick="confirmNotTraceable()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-sm transition">Save Not Traceable</button>
+
+                <div class="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
+                    <button onclick="closeReasonModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer">Cancel</button>
+                    <button onclick="confirmNotTraceable()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md shadow-rose-500/20 active:scale-95 transition cursor-pointer">
+                        Confirm Reason
+                    </button>
                 </div>
             </div>
         </div>
 
         <!-- Top Navigation Header -->
-        <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
-            <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div class="flex items-center gap-3">
-                    <div class="bg-indigo-600 px-3 py-2 rounded-lg font-black text-lg tracking-wider">BoCW</div>
-                    <div>
-                        <h1 class="font-bold text-lg leading-tight">Azamgarh District Execution & Monitoring Hub</h1>
-                        <p class="text-xs text-slate-400">70,673 Base Members &bull; 17,922 Families &bull; 22 Blocks Live Cloud Sync</p>
+        <header class="bg-slate-900/95 backdrop-blur-md text-white shadow-md sticky top-0 z-40 border-b border-slate-800">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
+                <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-gradient-to-tr from-indigo-600 to-indigo-500 px-3 py-1.5 rounded-xl font-black text-lg tracking-wider shadow-md shadow-indigo-500/30 ring-1 ring-white/15">
+                            BoCW
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h1 class="font-bold text-base leading-tight">Azamgarh District Execution Hub</h1>
+                                <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Live Cloud</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400 mt-0.5">70,673 Base Members &bull; 17,922 Families &bull; 22 Blocks</p>
+                        </div>
                     </div>
+
+                    <!-- Mobile-only Logout button -->
+                    <button onclick="logoutPortalUser()" title="Sign out of portal" class="md:hidden px-3 py-1.5 bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-bold rounded-lg transition">
+                        Logout
+                    </button>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-2.5">
-                    <div id="modeSwitcherContainer" class="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-1">
-                        <span class="text-xs text-slate-400 px-2 font-medium">MODE:</span>
-                        <select id="roleSelector" onchange="switchRole(this.value)" class="bg-slate-900 text-white text-sm font-semibold rounded px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+                    <div id="modeSwitcherContainer" class="flex items-center bg-slate-800/90 border border-slate-700 rounded-xl p-1 shadow-inner">
+                        <span class="text-[11px] text-slate-400 px-2 font-bold uppercase tracking-wider">Mode:</span>
+                        <select id="roleSelector" onchange="switchRole(this.value)" class="bg-slate-900 text-white text-xs font-semibold rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
                             <option value="deo">Block DEO Terminal</option>
                             <option value="admin">ACMO District Command (22 Blocks)</option>
                         </select>
                     </div>
 
-                    <div id="loggedInUserBadge" class="flex items-center gap-1.5 bg-indigo-950/90 border border-indigo-700/60 px-3 py-1.5 rounded-lg text-indigo-300 text-xs font-bold">
+                    <div id="loggedInUserBadge" class="flex items-center gap-1.5 bg-indigo-950/80 border border-indigo-700/60 px-3 py-1.5 rounded-xl text-indigo-300 text-xs font-bold shadow-sm">
                         <span>Authenticated</span>
                     </div>
 
-                    <div class="hidden md:flex items-center gap-2 bg-emerald-950/90 border border-emerald-700/60 px-3 py-1.5 rounded-full text-emerald-400 text-xs font-semibold">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <div class="hidden lg:flex items-center gap-2 bg-emerald-950/80 border border-emerald-700/60 px-3 py-1.5 rounded-xl text-emerald-400 text-xs font-semibold shadow-sm">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
                         <span>Supabase Live</span>
                     </div>
 
-                    <button onclick="logoutPortalUser()" title="Sign out of portal" class="px-3 py-1.5 bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-bold rounded-lg transition cursor-pointer">
-                        Logout
+                    <button onclick="logoutPortalUser()" title="Sign out of portal" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-bold rounded-xl transition shadow-sm hover:shadow-rose-600/30 active:scale-95 cursor-pointer">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        <span>Logout</span>
                     </button>
                 </div>
             </div>
@@ -179,63 +297,93 @@
 
             <!-- VIEW A: BLOCK DEO TERMINAL -->
             <div id="deoView" class="space-y-6">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-5 space-y-4">
                     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-100 pb-4">
                         <div>
-                            <span class="inline-block bg-indigo-50 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-md mb-1 uppercase tracking-wider">Field Execution Workspace</span>
-                            <h2 class="text-xl font-bold text-slate-900" id="activeBlockTitle">MOHAMMADPUR Block Terminal</h2>
-                            <p class="text-xs text-slate-500 mt-0.5">Click any Family ID chip to copy for the NHA Portal. Use <b>+ Add Member</b> on any family card if extra members appear on PM-JAY.</p>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-[11px] font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wider border border-indigo-100">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                                    Field Execution Workspace
+                                </span>
+                            </div>
+                            <h2 class="text-xl font-bold text-slate-900 tracking-tight" id="activeBlockTitle">MOHAMMADPUR Block Terminal</h2>
+                            <p class="text-xs text-slate-500 mt-1">
+                                💡 Tip: Click any <span class="bg-slate-100 font-mono px-1.5 py-0.5 rounded text-slate-700 font-bold">📋 Family ID</span> to copy for PM-JAY. Use <span class="text-indigo-600 font-bold">+ Add Member</span> if extra beneficiaries appear on portal.
+                            </p>
                         </div>
 
-                        <div class="bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-lg text-right">
-                            <p class="text-[11px] text-slate-500 font-medium uppercase">Sync Status</p>
-                            <p class="text-sm font-bold text-indigo-600" id="syncStatusText">Initializing...</p>
+                        <div class="bg-slate-50/80 border border-slate-200/90 px-4 py-2 rounded-xl text-right shrink-0">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                                <p class="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Sync Status</p>
+                            </div>
+                            <p class="text-sm font-bold text-indigo-600 font-mono mt-0.5" id="syncStatusText">Initializing...</p>
                         </div>
                     </div>
 
-                    <!-- Filters -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+                    <!-- Filters Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5">
                         <div class="lg:col-span-3">
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">1. Assigned Block</label>
-                            <select id="blockSelector" onchange="onBlockChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">1. Assigned Block</label>
+                            <select id="blockSelector" onchange="onBlockChange()" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-sm">
                                 <option value="MOHAMMADPUR" selected>MOHAMMADPUR (3,542)</option>
                             </select>
                         </div>
 
                         <div class="lg:col-span-3">
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">2. Gram Panchayat (GP)</label>
-                            <select id="gpSelector" onchange="resetPageAndLoad()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">2. Gram Panchayat (GP)</label>
+                            <select id="gpSelector" onchange="resetPageAndLoad()" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-sm">
                                 <option value="ALL">All Gram Panchayats</option>
                             </select>
                         </div>
 
                         <div class="lg:col-span-2">
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">3. Status Filter</label>
-                            <select id="statusFilter" onchange="resetPageAndLoad()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">3. Status Filter</label>
+                            <select id="statusFilter" onchange="resetPageAndLoad()" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-sm">
                                 <option value="ALL" selected>All Statuses</option>
-                                <option value="Not Applied">Not Applied</option>
-                                <option value="Approved">Approved</option>
-                                <option value="Portal Pending">Portal Pending</option>
-                                <option value="No Record Found">No Record Found</option>
-                                <option value="Not Traceable">Not Traceable</option>
-                                <option value="EXTRA_ONLY">✨ Extra Added Members Only</option>
+                                <option value="Not Applied">Not Applied (आवेदन नहीं)</option>
+                                <option value="Approved">Approved (स्वीकृत)</option>
+                                <option value="Portal Pending">Portal Pending (प्रक्रियाधीन)</option>
+                                <option value="No Record Found">No Record Found (रिकॉर्ड नहीं)</option>
+                                <option value="Not Traceable">Not Traceable (ट्रेस नहीं)</option>
+                                <option value="EXTRA_ONLY">✨ Extra Added Only</option>
                             </select>
                         </div>
 
                         <div class="lg:col-span-4">
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">4. Search Block (Name, Family ID, Mobile)</label>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">4. Search (Name, Family ID, Mobile)</label>
                             <div class="flex gap-2">
                                 <div class="relative w-full">
-                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
                                         </svg>
                                     </span>
-                                    <input type="text" id="searchInput" onkeydown="if(event.key==='Enter') resetPageAndLoad()" placeholder="Paste Family ID, Name, or Mobile..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/80 focus:border-indigo-500 focus:bg-white focus:shadow-sm">
+                                    <input
+                                        type="text"
+                                        id="searchInput"
+                                        onkeydown="if(event.key==='Enter') resetPageAndLoad()"
+                                        oninput="toggleSearchClearButton(this)"
+                                        placeholder="Paste Family ID, Name, Mobile... (Enter ↵)"
+                                        class="w-full pl-10 pr-8 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/80 focus:border-indigo-500 focus:bg-white shadow-sm"
+                                    >
+                                    <button
+                                        type="button"
+                                        id="clearSearchBtn"
+                                        onclick="clearSearchInput()"
+                                        title="Clear search"
+                                        class="hidden absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-700 font-bold text-base cursor-pointer"
+                                    >
+                                        ✕
+                                    </button>
                                 </div>
-                                <button id="searchBtn" onclick="resetPageAndLoad()" class="group relative inline-flex items-center justify-center gap-2 px-5 py-2 btn-search-cool text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-500/25 hover:shadow-lg hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 shrink-0 overflow-hidden cursor-pointer">
+                                <button
+                                    id="searchBtn"
+                                    onclick="resetPageAndLoad()"
+                                    class="group relative inline-flex items-center justify-center gap-1.5 px-5 py-2.5 btn-search-cool text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-500/25 hover:shadow-indigo-500/40 active:scale-95 shrink-0 overflow-hidden cursor-pointer"
+                                >
                                     <span class="absolute inset-0 w-full h-full btn-search-shimmer"></span>
-                                    <svg id="searchBtnIcon" class="w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <svg id="searchBtnIcon" class="w-4 h-4 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
                                     </svg>
                                     <span class="relative tracking-wide">Search</span>
@@ -244,99 +392,162 @@
                         </div>
                     </div>
 
-                    <!-- Live Block Summary Bar (7 Boxes: 6 Base + 1 Extra Added) -->
-                    <div id="blockSummaryBar" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 pt-2 border-t border-slate-100 text-xs"></div>
+                    <!-- Live Block Summary Bar (7 Interactive Cards) -->
+                    <div class="pt-2 border-t border-slate-100">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Quick Metrics Overview (Click box to filter status):</span>
+                        </div>
+                        <div id="blockSummaryBar" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 text-xs"></div>
+                    </div>
                 </div>
 
                 <!-- Family & Member List -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="px-6 py-3.5 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-50">
-                        <h3 class="font-bold text-slate-800 text-sm">Family & Member Verification List</h3>
-                        <div class="flex items-center gap-3">
-                            <span id="recordCount" class="text-xs font-semibold text-slate-600 bg-slate-200/80 px-2.5 py-1 rounded-md">Loading...</span>
-                            <button onclick="exportCampCallListExcel()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition">
-                                📥 Download List (.xlsx)
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200/90 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50/75">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                            </div>
+                            <h3 class="font-bold text-slate-800 text-sm">Family &amp; Member Verification List</h3>
+                            <span id="recordCount" class="text-xs font-semibold text-slate-600 bg-slate-200/70 px-2.5 py-0.5 rounded-full border border-slate-300/60">Loading...</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="exportCampCallListExcel()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow-emerald-600/30 active:scale-95 transition cursor-pointer">
+                                <span>📥</span>
+                                <span>Download List (.xlsx)</span>
                             </button>
                         </div>
                     </div>
 
-                    <div class="divide-y divide-slate-200" id="familyListContainer">
-                        <div class="p-10 text-center text-slate-400 text-sm">Connecting to Supabase and loading records...</div>
+                    <div class="divide-y divide-slate-100" id="familyListContainer">
+                        <div class="p-12 text-center text-slate-400 text-sm flex flex-col items-center justify-center gap-3">
+                            <div class="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                            <p class="font-semibold text-slate-600">Connecting to Supabase and loading records...</p>
+                        </div>
                     </div>
 
                     <!-- Pagination Bar -->
-                    <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs font-semibold">
-                        <button onclick="changePage(-1)" id="prevBtn" class="px-3.5 py-1.5 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 disabled:opacity-40 transition">← Previous Page</button>
-                        <span id="pageIndicator" class="text-slate-700 font-bold">Page 1</span>
-                        <button onclick="changePage(1)" id="nextBtn" class="px-3.5 py-1.5 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 disabled:opacity-40 transition">Next Page →</button>
+                    <div class="px-6 py-4 bg-slate-50/75 border-t border-slate-200/90 flex justify-between items-center text-xs font-semibold">
+                        <button onclick="changePage(-1)" id="prevBtn" class="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition active:scale-95 cursor-pointer">
+                            <span>←</span>
+                            <span>Previous Page</span>
+                        </button>
+                        <span id="pageIndicator" class="text-slate-700 font-bold px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-mono">Page 1</span>
+                        <button onclick="changePage(1)" id="nextBtn" class="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition active:scale-95 cursor-pointer">
+                            <span>Next Page</span>
+                            <span>→</span>
+                        </button>
                     </div>
                 </div>
             </div>
 
             <!-- VIEW B: ACMO DISTRICT COMMAND VIEW -->
             <div id="adminView" class="space-y-6 hidden">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-5">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-4 mb-5">
                         <div>
-                            <span class="inline-block bg-purple-50 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-md mb-1 uppercase tracking-wider">District Nodal Control Center</span>
-                            <h2 class="text-xl font-bold text-slate-900">ACMO 22-Block Real-Time Command Dashboard</h2>
-                            <p class="text-sm text-slate-500">Official 70,673 base dataset protected with separate tracking for extra PM-JAY members.</p>
+                            <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-[11px] font-bold px-2.5 py-0.5 rounded-md mb-1 uppercase tracking-wider border border-purple-100">
+                                <span class="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
+                                District Nodal Control Center
+                            </span>
+                            <h2 class="text-xl font-bold text-slate-900 tracking-tight">ACMO 22-Block Real-Time Command Dashboard</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Official 70,673 base dataset protected with segregated auditing for extra PM-JAY members.</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            <button onclick="checkSpeedAnomalies()" class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition">Run Velocity Check</button>
-                            <button onclick="loadAdminLeaderboard()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition">Refresh Live Stats</button>
-                            <button onclick="exportLeaderboardExcel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm">📥 Download Leaderboard (.xlsx)</button>
+                            <button id="velocityCheckBtn" onclick="checkSpeedAnomalies()" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer">
+                                <span>⚡</span>
+                                <span>Run Velocity Check</span>
+                            </button>
+                            <button onclick="loadAdminLeaderboard()" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300/80 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer">
+                                <span>🔄</span>
+                                <span>Refresh Live Stats</span>
+                            </button>
+                            <button onclick="exportLeaderboardExcel()" class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm hover:shadow-emerald-600/30 active:scale-95 cursor-pointer">
+                                <span>📥</span>
+                                <span>Download Leaderboard (.xlsx)</span>
+                            </button>
                         </div>
                     </div>
 
-                    <div id="antiCheatBanner" class="hidden mb-4 p-4 rounded-xl border text-xs font-semibold"></div>
+                    <div id="antiCheatBanner" class="hidden mb-4 p-4 rounded-xl border text-xs font-semibold animate-fade-in"></div>
 
                     <!-- District KPI Cards (6 Cards) -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
-                        <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl">
-                            <p class="text-xs font-semibold text-slate-500 uppercase">Base District Target</p>
-                            <p class="text-2xl font-black text-slate-900 mt-1" id="statTotalMembers">70,673</p>
-                            <p class="text-xs text-slate-500 mt-1" id="statTotalFamilies">17,922 Families &bull; 22 Blocks</p>
+                        <div class="bg-gradient-to-br from-slate-50 to-slate-100/60 border border-slate-200/90 p-4 rounded-2xl shadow-2xs">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Base Target</p>
+                                <span class="text-slate-400">🎯</span>
+                            </div>
+                            <p class="text-2xl font-black text-slate-900 mt-2 font-mono tracking-tight" id="statTotalMembers">70,673</p>
+                            <p class="text-[11px] text-slate-500 mt-1" id="statTotalFamilies">17,922 Families &bull; 22 Blocks</p>
                         </div>
-                        <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl">
-                            <p class="text-xs font-semibold text-emerald-700 uppercase">Approved (Base)</p>
-                            <p class="text-2xl font-black text-emerald-900 mt-1" id="statApproved">--</p>
-                            <p class="text-xs text-emerald-700 mt-1 font-medium" id="statApprovedPct">Calculating...</p>
+                        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/40 border border-emerald-200 p-4 rounded-2xl shadow-2xs">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[11px] font-bold text-emerald-700 uppercase tracking-wide">Approved</p>
+                                <span class="text-emerald-500">✓</span>
+                            </div>
+                            <p class="text-2xl font-black text-emerald-900 mt-2 font-mono tracking-tight" id="statApproved">--</p>
+                            <p class="text-[11px] text-emerald-700 mt-1 font-semibold" id="statApprovedPct">Calculating...</p>
                         </div>
-                        <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl">
-                            <p class="text-xs font-semibold text-amber-700 uppercase">Portal Pending</p>
-                            <p class="text-2xl font-black text-amber-900 mt-1" id="statPending">--</p>
-                            <p class="text-xs text-amber-700 mt-1">Awaiting approval</p>
+                        <div class="bg-gradient-to-br from-amber-50 to-amber-100/40 border border-amber-200 p-4 rounded-2xl shadow-2xs">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[11px] font-bold text-amber-700 uppercase tracking-wide">Portal Pending</p>
+                                <span class="text-amber-500">⏳</span>
+                            </div>
+                            <p class="text-2xl font-black text-amber-900 mt-2 font-mono tracking-tight" id="statPending">--</p>
+                            <p class="text-[11px] text-amber-700 mt-1 font-medium">Awaiting approval</p>
                         </div>
-                        <div class="bg-slate-100 border border-slate-300 p-4 rounded-xl">
-                            <p class="text-xs font-semibold text-slate-700 uppercase">Not Applied</p>
-                            <p class="text-2xl font-black text-slate-900 mt-1" id="statNotApplied">--</p>
-                            <p class="text-xs text-slate-600 mt-1">Actionable camp target</p>
+                        <div class="bg-gradient-to-br from-slate-100 to-slate-200/50 border border-slate-300 p-4 rounded-2xl shadow-2xs">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[11px] font-bold text-slate-700 uppercase tracking-wide">Not Applied</p>
+                                <span class="text-slate-500">⚪</span>
+                            </div>
+                            <p class="text-2xl font-black text-slate-900 mt-2 font-mono tracking-tight" id="statNotApplied">--</p>
+                            <p class="text-[11px] text-slate-600 mt-1 font-medium">Actionable camp target</p>
                         </div>
-                        <div class="bg-rose-50 border border-rose-200 p-4 rounded-xl">
-                            <p class="text-xs font-semibold text-rose-700 uppercase">No Record + Not Traceable</p>
-                            <p class="text-2xl font-black text-rose-900 mt-1" id="statOther">--</p>
-                            <p class="text-xs text-rose-700 mt-1">Audited & Excluded</p>
+                        <div class="bg-gradient-to-br from-rose-50 to-rose-100/40 border border-rose-200 p-4 rounded-2xl shadow-2xs">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[11px] font-bold text-rose-700 uppercase tracking-wide">No Record + Not Traceable</p>
+                                <span class="text-rose-500">✕</span>
+                            </div>
+                            <p class="text-2xl font-black text-rose-900 mt-2 font-mono tracking-tight" id="statOther">--</p>
+                            <p class="text-[11px] text-rose-700 mt-1 font-medium">Audited &amp; Excluded</p>
                         </div>
-                        <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-xl">
-                            <p class="text-xs font-semibold text-indigo-700 uppercase">+ Extra Added</p>
-                            <p class="text-2xl font-black text-indigo-900 mt-1" id="statExtraAdded">--</p>
-                            <p class="text-xs text-indigo-700 mt-1">New PM-JAY members</p>
+                        <div class="bg-gradient-to-br from-indigo-50 to-indigo-100/40 border border-indigo-200 p-4 rounded-2xl shadow-2xs">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[11px] font-bold text-indigo-700 uppercase tracking-wide">+ Extra Added</p>
+                                <span class="text-indigo-500">✨</span>
+                            </div>
+                            <p class="text-2xl font-black text-indigo-900 mt-2 font-mono tracking-tight" id="statExtraAdded">--</p>
+                            <p class="text-[11px] text-indigo-700 mt-1 font-medium">New PM-JAY members</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- 22-Block Live Leaderboard Table -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-                        <h3 class="font-bold text-slate-800 text-sm">22-Block Live Performance Leaderboard</h3>
-                        <span class="text-xs text-slate-500">Click any Block row to open its DEO Terminal</span>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-sm">22-Block Live Performance Leaderboard</h3>
+                            <span class="text-xs text-slate-500">Click any Block row to jump straight to its DEO Terminal</span>
+                        </div>
+                        <div class="w-full sm:w-64">
+                            <input
+                                type="text"
+                                id="leaderboardSearchInput"
+                                oninput="filterLeaderboardRows(this.value)"
+                                placeholder="Filter blocks (e.g. Mirzapur)..."
+                                class="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold shadow-2xs"
+                            >
+                        </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">
                             <thead>
-                                <tr class="border-b border-slate-200 bg-slate-100 text-slate-600 text-xs uppercase font-bold">
-                                    <th class="p-3.5">Rank & Block</th>
+                                <tr class="border-b border-slate-200 bg-slate-100/75 text-slate-600 text-xs uppercase font-bold sticky top-0 z-10 backdrop-blur">
+                                    <th class="p-3.5">Rank &amp; Block</th>
                                     <th class="p-3.5 text-right">Families</th>
                                     <th class="p-3.5 text-right">Base Members</th>
                                     <th class="p-3.5 text-right text-emerald-700">Approved</th>
@@ -345,7 +556,7 @@
                                     <th class="p-3.5 text-right text-purple-700">No Record</th>
                                     <th class="p-3.5 text-right text-rose-700">Not Traceable</th>
                                     <th class="p-3.5 text-right text-indigo-700">+ Extra Added</th>
-                                    <th class="p-3.5 w-36">Completion Rate</th>
+                                    <th class="p-3.5 w-40">Completion Rate</th>
                                 </tr>
                             </thead>
                             <tbody id="leaderboardTableBody" class="divide-y divide-slate-100 text-sm">
@@ -359,8 +570,8 @@
         </main>
 
         <!-- Footer -->
-        <footer class="bg-slate-900 text-slate-400 py-4 text-center text-xs mt-auto">
-            <p>BoCW District Execution Portal &bull; Azamgarh Administration &bull; Powered by Supabase & Cloudflare Pages</p>
+        <footer class="bg-slate-900 text-slate-400 py-4 text-center text-xs mt-auto border-t border-slate-800">
+            <p class="tracking-wide">BoCW District Execution Portal &bull; Azamgarh Administration &bull; Powered by Supabase &amp; Cloudflare Pages</p>
         </footer>
 
     </div>

@@ -1,34 +1,124 @@
 /* ==========================================================================
-   BoCW District Monitoring & Execution Portal - Custom Stylesheet
+   BoCW District Monitoring & Execution Portal - Premium Modern Stylesheet
    ========================================================================== */
 
-@layer base {
-    html {
-        scroll-behavior: smooth;
-    }
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-    body {
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
+:root {
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+html {
+    scroll-behavior: smooth;
+    font-family: var(--font-sans);
+}
+
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: var(--font-sans);
+    background-color: #f8fafc;
+    background-image: 
+        radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.04) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.03) 0px, transparent 50%);
+    background-attachment: fixed;
+}
+
+/* Monospace helpers */
+.font-mono {
+    font-family: var(--font-mono);
+}
+
+/* ==========================================================================
+   Keyframe Animations & Micro-Interactions
+   ========================================================================== */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
     }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUpModal {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(99, 102, 241, 0);
+    }
+}
+
+@keyframes shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modal-content-animated {
+    animation: slideUpModal 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.toast-animated {
+    animation: toastSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Modal Backdrop */
+.modal-backdrop {
+    background-color: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: all 0.25s ease-out;
 }
 
 /* Search Button Gradient & Shimmer Effect */
 .btn-search-cool {
-    background-image: linear-gradient(to right, #4f46e5, #7c3aed, #4f46e5);
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #7c3aed 100%);
     background-size: 200% auto;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-search-cool:hover {
     background-position: right center;
+    box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.45);
 }
 
 .btn-search-shimmer {
     background: linear-gradient(
         to right,
         transparent 0%,
-        rgba(255, 255, 255, 0.22) 50%,
+        rgba(255, 255, 255, 0.28) 50%,
         transparent 100%
     );
     transform: translateX(-100%);
@@ -39,15 +129,87 @@
     transform: translateX(100%);
 }
 
-/* Modal Backdrop Transition */
-.modal-backdrop {
-    backdrop-filter: blur(2px);
+/* ==========================================================================
+   Tactile & Elevation Card Helpers
+   ========================================================================== */
+
+.family-card {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Subtle Custom Scrollbar for Tables */
+.family-card:hover {
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.07), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+}
+
+.member-row {
+    transition: all 0.18s ease-in-out;
+}
+
+.member-row:hover {
+    border-color: #cbd5e1;
+    transform: translateX(2px);
+}
+
+/* Active Status Pill Shadows */
+.status-btn-active-approved {
+    box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.4);
+}
+.status-btn-active-pending {
+    box-shadow: 0 4px 12px -2px rgba(245, 158, 11, 0.4);
+}
+.status-btn-active-not-applied {
+    box-shadow: 0 4px 12px -2px rgba(71, 85, 105, 0.35);
+}
+.status-btn-active-no-record {
+    box-shadow: 0 4px 12px -2px rgba(147, 51, 234, 0.4);
+}
+.status-btn-active-not-traceable {
+    box-shadow: 0 4px 12px -2px rgba(225, 29, 72, 0.4);
+}
+
+/* Interactive Summary Badges in Block Summary Bar */
+.summary-stat-box {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    user-select: none;
+}
+
+.summary-stat-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px -3px rgba(0, 0, 0, 0.08);
+}
+
+.summary-stat-box:active {
+    transform: translateY(0);
+}
+
+/* Skeleton Loading Shimmer */
+.skeleton-box {
+    position: relative;
+    overflow: hidden;
+    background-color: #e2e8f0;
+    border-radius: 0.5rem;
+}
+
+.skeleton-box::after {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0.5) 20%,
+        rgba(255, 255, 255, 0.7) 60%,
+        rgba(255, 255, 255, 0)
+    );
+    animation: shimmer 1.8s infinite;
+    content: '';
+}
+
+/* Subtle Custom Scrollbar */
 ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
 }
 
 ::-webkit-scrollbar-track {
@@ -56,10 +218,29 @@
 
 ::-webkit-scrollbar-thumb {
     background: #cbd5e1;
-    border-radius: 4px;
+    border-radius: 9999px;
+    border: 2px solid #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
 
+/* Floating Scroll to Top Pill */
+#scrollToTopBtn {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(12px);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#scrollToTopBtn.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+#scrollToTopBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -3px rgba(99, 102, 241, 0.35);
+}

@@ -14,6 +14,8 @@ async function exportCampCallListExcel() {
 
     try {
         statusText.innerText = "Generating Excel (.xlsx)...";
+        showToast("Generating Excel file, please wait...", "info", 2000);
+
         let query = supabaseClient
             .from('bocw_members')
             .select('*')
@@ -42,8 +44,8 @@ async function exportCampCallListExcel() {
         if (error) throw error;
 
         if (!data || data.length === 0) {
-            alert("No records found for export.");
-            statusText.innerText = "Synced with Cloud DB";
+            showToast("No records found for export.", "warning");
+            statusText.innerText = "✓ Synced with Cloud DB";
             return;
         }
 
@@ -112,25 +114,29 @@ async function exportCampCallListExcel() {
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "BoCW_List");
         const statusLabel = statusFilter === 'ALL' ? 'AllStatuses' : statusFilter.replace(/\s+/g, '');
-        XLSX.writeFile(wb, `BoCW_${block}_${gp}_${statusLabel}.xlsx`);
-        statusText.innerText = "Excel Exported";
+        const filename = `BoCW_${block}_${gp}_${statusLabel}.xlsx`;
+        XLSX.writeFile(wb, filename);
+        statusText.innerText = "✓ Excel Exported";
+        showToast(`Downloaded ${filename} successfully!`, "success", 3000);
     } catch (err) {
         console.error("Excel export error:", err);
-        alert(`Export failed: ${err.message}`);
+        showToast(`Export failed: ${err.message}`, "error");
         statusText.innerText = "Export Error";
     }
 }
 
 function exportLeaderboardExcel() {
     if (!isMasterAdmin()) {
-        alert("Access Denied: Only ACMO Master can export the 22-Block Leaderboard.");
+        showToast("Access Denied: Only ACMO Master can export the 22-Block Leaderboard.", "error");
         return;
     }
 
     if (!cachedLeaderboard || cachedLeaderboard.length === 0) {
-        alert("Wait for the leaderboard to finish loading first.");
+        showToast("Wait for the leaderboard to finish loading first.", "warning");
         return;
     }
+
+    showToast("Generating Leaderboard Excel file...", "info", 1800);
 
     const headers = [
         "Rank",
@@ -192,4 +198,5 @@ function exportLeaderboardExcel() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "22_Block_Leaderboard");
     XLSX.writeFile(wb, "Azamgarh_BoCW_22Block_Leaderboard.xlsx");
+    showToast("Downloaded 22-Block Leaderboard successfully!", "success", 3000);
 }
