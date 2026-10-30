@@ -49,6 +49,24 @@ function cleanStatus(raw) {
     return String(raw).trim();
 }
 
+function formatIstTimestampShort(isoStr) {
+    if (!isoStr) return '--';
+    try {
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return '--';
+        return d.toLocaleString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            day: '2-digit',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+    } catch (e) {
+        return '--';
+    }
+}
+
 const COPIED_MARKER = '[COPIED]';
 
 function isRecordCopied(remark) {

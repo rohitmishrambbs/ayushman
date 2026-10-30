@@ -649,6 +649,12 @@ function filterCopiedReportRows(query) {
     const rows = document.querySelectorAll('#copiedReportTableBody tr');
     rows.forEach(tr => {
         const text = tr.innerText.toLowerCase();
+        const fids = (tr.getAttribute('data-family-ids') || '').toLowerCase();
+        tr.style.display = (!q || text.includes(q) || fids.includes(q)) ? '' : 'none';
+    });
+    return;
+    rows.forEach(tr => {
+        const text = tr.innerText.toLowerCase();
         if (!q || text.includes(q)) {
             tr.style.display = '';
         } else {
@@ -682,7 +688,7 @@ async function loadCopiedFamilyReport() {
         while (true) {
             let query = supabaseClient
                 .from('bocw_members')
-                .select('block_name, gram_panchayat_name, family_id, member_id, mobile_no, STATUS, remark')
+                .select('block_name, gram_panchayat_name, family_id, member_id, mobile_no, STATUS, remark, updated_at')
                 .not('member_id', 'ilike', 'EXTRA_%');
 
             if (block === 'ALL') {
@@ -720,7 +726,8 @@ async function loadCopiedFamilyReport() {
                     block_name: blk,
                     gp_name: gp,
                     all_families: new Set(),
-                    copied_families: new Map() // famId -> { hasProcessed: boolean, statuses: Set }
+                    copied_families: new Map(), // famId -> { hasProcessed: boolean, statuses: Set }
+                    latest_timestamp: null
                 });
             }
 
@@ -741,7 +748,8 @@ async function loadCopiedFamilyReport() {
                         total_members: 0,
                         processed_members: 0,
                         not_processed_members: 0,
-                        has_processed: false
+                        has_processed: false,
+                        latest_timestamp: r.updated_at || null
                     });
                 }
                 const famObj = gpEntry.copied_families.get(famId);
@@ -753,6 +761,14 @@ async function loadCopiedFamilyReport() {
                     famObj.not_processed_members += 1;
                 }
                 copiedFamilyMap.set(`${gpKey}__${famId}`, famObj);
+                if (r.updated_at) {
+                    if (!gpEntry.latest_timestamp || r.updated_at > gpEntry.latest_timestamp) {
+                        gpEntry.latest_timestamp = r.updated_at;
+                    }
+                    if (!famObj.latest_timestamp || r.updated_at > famObj.latest_timestamp) {
+                        famObj.latest_timestamp = r.updated_at;
+                    }
+                }
             }
         });
 
@@ -771,6 +787,7 @@ async function loadCopiedFamilyReport() {
                 copied_count: copiedFams.length,
                 copied_processed: copiedProcessed,
                 copied_unprocessed: copiedUnprocessed,
+                latest_timestamp: g.latest_timestamp,
                 copied_family_ids: copiedFams.map(f => f.family_id).sort()
             };
         }).sort((a, b) => {
@@ -829,6 +846,7 @@ async function loadCopiedFamilyReport() {
                 ? "bg-indigo-50/20 hover:bg-indigo-50/70 cursor-pointer transition"
                 : "hover:bg-slate-50 cursor-pointer transition";
             tr.title = `Click to open ${row.block_name} -> ${row.gp_name} in DEO Terminal`;
+            tr.setAttribute('data-family-ids', row.copied_family_ids.join(' '));
             tr.onclick = async () => {
                 if (!isMasterAdmin()) return;
                 document.getElementById('blockSelector').value = row.block_name;
@@ -842,16 +860,16 @@ async function loadCopiedFamilyReport() {
                 showToast(`Opened ${row.gp_name} (${row.block_name})`, 'info', 2000);
             };
 
-            const famBadgesHtml = row.copied_family_ids.length > 0
-                ? `<div class="flex flex-wrap gap-1 max-w-md">` +
-                  row.copied_family_ids.slice(0, 8).map(fid =>
-                      `<span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200 font-mono text-[11px] font-bold">${escapeHtml(fid)}</span>`
-                  ).join('') +
-                  (row.copied_family_ids.length > 8
-                      ? `<span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-mono text-[11px] font-bold">+${row.copied_family_ids.length - 8} more</span>`
-                      : '') +
-                  `</div>`
-                : `<span class="text-xs text-slate-400 italic">0 copied</span>`;
+            const timeLabel = formatIstTimestampShort(row.latest_timestamp);
+
+
+
+
+
+
+
+
+
 
             tr.innerHTML = `
                 <td class="p-3.5 font-bold text-slate-700 whitespace-nowrap">${idx + 1}. ${escapeHtml(row.block_name)}</td>
@@ -862,7 +880,7 @@ async function loadCopiedFamilyReport() {
                 </td>
                 <td class="p-3.5 text-right font-mono font-bold text-emerald-700">${row.copied_processed.toLocaleString()}</td>
                 <td class="p-3.5 text-right font-mono font-semibold text-amber-700">${row.copied_unprocessed.toLocaleString()}</td>
-                <td class="p-3.5">${famBadgesHtml}</td>
+                <td class="p-3.5 text-right font-mono text-xs text-slate-500 whitespace-nowrap">${escapeHtml(timeLabel)}</td>
             `;
             tbody.appendChild(tr);
         });

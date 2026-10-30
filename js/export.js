@@ -614,7 +614,7 @@ function exportCopiedFamilyReportExcel() {
         "Unique Family IDs Copied",
         "Copied & Processed Families",
         "Copied & Not Processed Families",
-        "Unique Copied Family IDs"
+        "Timestamp"
     ];
 
     const gpAoa = [gpHeaders];
@@ -637,7 +637,7 @@ function exportCopiedFamilyReportExcel() {
             { t: 'n', v: r.copied_count, z: '0' },
             { t: 'n', v: r.copied_processed, z: '0' },
             { t: 'n', v: r.copied_unprocessed, z: '0' },
-            r.copied_family_ids.join(', ')
+            r.latest_timestamp ? formatIstTimestampShort(r.latest_timestamp) : ""
         ]);
     });
 
@@ -661,7 +661,7 @@ function exportCopiedFamilyReportExcel() {
         { wch: 24 },
         { wch: 26 },
         { wch: 28 },
-        { wch: 50 }
+        { wch: 22 }
     ];
 
     const famHeaders = [
