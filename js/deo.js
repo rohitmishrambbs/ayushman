@@ -4,40 +4,6 @@
  * ============================================================================
  */
 
-async function fetchBlockGPsWithLiveCounts(block) {
-    const [rpcRes, extraRes] = await Promise.all([
-        supabaseClient.rpc('get_block_gps', { p_block: block }),
-        supabaseClient
-            .from('bocw_members')
-            .select('gram_panchayat_name, STATUS')
-            .eq('block_name', block)
-            .ilike('member_id', 'EXTRA_%')
-    ]);
-
-    if (rpcRes.error) throw rpcRes.error;
-    const gps = rpcRes.data || [];
-    const extraRows = (!extraRes.error && extraRes.data) ? extraRes.data : [];
-
-    if (extraRows.length > 0) {
-        const extraApprovedByGp = {};
-        extraRows.forEach(r => {
-            const gpName = String(r.gram_panchayat_name ?? '').trim();
-            if (gpName && cleanStatus(r.STATUS) === 'Approved') {
-                extraApprovedByGp[gpName] = (extraApprovedByGp[gpName] || 0) + 1;
-            }
-        });
-
-        gps.forEach(gp => {
-            const gpName = String(gp.gram_panchayat_name ?? '').trim();
-            if (extraApprovedByGp[gpName]) {
-                gp.approved_members = Number(gp.approved_members || 0) + extraApprovedByGp[gpName];
-            }
-        });
-    }
-
-    return gps;
-}
-
 async function loadGPDropdown(preserveSelection = false) {
     const block = getAuthorizedBlock();
     if (!block) return;
@@ -56,7 +22,8 @@ async function loadGPDropdown(preserveSelection = false) {
     }
 
     try {
-        const data = await fetchBlockGPsWithLiveCounts(block);
+        const { data, error } = await supabaseClient.rpc('get_block_gps', { p_block: block });
+        if (error) throw error;
 
         gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats in ${block} (${data ? data.length : 0} GPs)</option>`;
         if (data && data.length > 0) {
@@ -325,7 +292,6 @@ async function confirmAddMember() {
         closeAddMemberModal();
         renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
         updateBlockSummaryBar(authBlock);
-        loadGPDropdown(true);
         statusText.innerText = `✓ Added ${nameInput}`;
         showToast(`Member "${nameInput}" added to Family ${newRecord.family_id}`, "success");
     } catch (err) {
@@ -361,7 +327,6 @@ async function deleteExtraMember(internalMemberId, memberName) {
         currentLoadedRecords = currentLoadedRecords.filter(r => String(r.member_id) !== String(internalMemberId));
         renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
         updateBlockSummaryBar(authBlock);
-        loadGPDropdown(true);
         statusText.innerText = "✓ Removed Extra Member";
         showToast(`Removed member "${memberName}"`, "info");
     } catch (err) {
