@@ -146,6 +146,7 @@ function logoutPortalUser() {
     currentTotalCount = 0;
     cachedLeaderboard = [];
     cachedDailyProgress = [];
+    cachedCopiedReport = { gpRows: [], familyRows: [], blockScope: 'ALL' };
     currentDailyReportDate = '';
     currentPage = 1;
 
@@ -153,6 +154,8 @@ function logoutPortalUser() {
     document.getElementById('leaderboardTableBody').innerHTML = '';
     const dailyTbody = document.getElementById('dailyProgressTableBody');
     if (dailyTbody) dailyTbody.innerHTML = '';
+    const copiedTbody = document.getElementById('copiedReportTableBody');
+    if (copiedTbody) copiedTbody.innerHTML = '';
     const antiCheatBanner = document.getElementById('antiCheatBanner');
     if (antiCheatBanner) antiCheatBanner.classList.add('hidden');
     document.getElementById('appShell').classList.add('hidden');
@@ -205,6 +208,16 @@ function configureBlockSelectorForSession(session) {
                 `<option value="ALL" ${prevAdminBlock === 'ALL' ? 'selected' : ''}>🌐 ALL 22 BLOCKS (Entire District - 70,673)</option>` +
                 ALL_BLOCKS_META.map(b =>
                     `<option value="${b.name}" ${b.name === prevAdminBlock ? 'selected' : ''}>${b.label}</option>`
+                ).join('');
+        }
+
+        const copiedBlockSelector = document.getElementById('copiedReportBlockSelector');
+        if (copiedBlockSelector) {
+            const prevCopiedBlock = copiedBlockSelector.value || 'MOHAMMADPUR';
+            copiedBlockSelector.innerHTML =
+                `<option value="ALL" ${prevCopiedBlock === 'ALL' ? 'selected' : ''}>🌐 ALL 22 BLOCKS (Copied GPs)</option>` +
+                ALL_BLOCKS_META.map(b =>
+                    `<option value="${b.name}" ${b.name === prevCopiedBlock ? 'selected' : ''}>${b.label}</option>`
                 ).join('');
         }
 

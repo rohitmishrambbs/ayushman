@@ -390,11 +390,14 @@ async function saveMemberStatus(memberId, status, remark) {
     const statusText = document.getElementById('syncStatusText');
     try {
         statusText.innerText = `Saving...`;
+        const rec = currentLoadedRecords.find(r => String(r.member_id) === String(memberId));
+        const finalRemark = buildRemarkWithCopied(remark, rec ? rec.remark : '');
+
         let updQuery = supabaseClient
             .from('bocw_members')
             .update({
                 STATUS: status,
-                remark: remark,
+                remark: finalRemark,
                 updated_at: new Date().toISOString()
             })
             .eq('member_id', String(memberId));
@@ -417,10 +420,9 @@ async function saveMemberStatus(memberId, status, remark) {
             if (fallback.error) throw fallback.error;
         }
 
-        const rec = currentLoadedRecords.find(r => String(r.member_id) === String(memberId));
         if (rec) {
             rec.STATUS = status;
-            rec.remark = remark;
+            rec.remark = finalRemark;
         }
 
         statusText.innerText = `✓ Saved Status`;
@@ -447,11 +449,16 @@ async function saveFamilyStatus(familyId, status, remark) {
     const statusText = document.getElementById('syncStatusText');
     try {
         statusText.innerText = `Updating Family ${familyId}...`;
+        const famWasCopied = currentLoadedRecords.some(
+            r => String(r.family_id) === String(familyId) && isRecordCopied(r.remark)
+        );
+        const finalRemark = buildRemarkWithCopied(remark, famWasCopied ? COPIED_MARKER : '');
+
         let updQuery = supabaseClient
             .from('bocw_members')
             .update({
                 STATUS: status,
-                remark: remark,
+                remark: finalRemark,
                 updated_at: new Date().toISOString()
             })
             .eq('family_id', String(familyId));
@@ -477,7 +484,7 @@ async function saveFamilyStatus(familyId, status, remark) {
         currentLoadedRecords.forEach(r => {
             if (String(r.family_id) === String(familyId)) {
                 r.STATUS = status;
-                r.remark = remark;
+                r.remark = finalRemark;
             }
         });
 

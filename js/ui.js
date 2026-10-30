@@ -49,6 +49,29 @@ function cleanStatus(raw) {
     return String(raw).trim();
 }
 
+const COPIED_MARKER = '[COPIED]';
+
+function isRecordCopied(remark) {
+    return String(remark ?? '').includes('[COPIED');
+}
+
+function cleanRemark(rawRemark) {
+    if (!rawRemark) return '';
+    return String(rawRemark)
+        .replace(/\[COPIED(?::[^\]]*)?\]\s*\|\s*/g, '')
+        .replace(/\[COPIED(?::[^\]]*)?\]/g, '')
+        .trim();
+}
+
+function buildRemarkWithCopied(newReason, existingRemark) {
+    const cleanReason = cleanRemark(newReason);
+    const wasCopied = isRecordCopied(existingRemark);
+    if (!wasCopied) {
+        return cleanReason || null;
+    }
+    return cleanReason ? `${COPIED_MARKER} | ${cleanReason}` : COPIED_MARKER;
+}
+
 function escapeHtml(str) {
     return String(str ?? '')
         .replace(/&/g, '&amp;')
@@ -152,7 +175,7 @@ function renderFamilyGroups(records, totalCount) {
             const birthYear = String(m.birth_year ?? '');
             const dob = String(m.date_of_birth ?? '');
             const statusVal = cleanStatus(m.STATUS);
-            const remark = m.remark || '';
+            const remark = cleanRemark(m.remark);
             const isWorker = memType.toLowerCase().includes('worker');
 
             // Gender icon helper
@@ -213,15 +236,21 @@ function renderFamilyGroups(records, totalCount) {
             `;
         }).join('');
 
+        const isFamilyCopied = fam.members.some(m => isRecordCopied(m.remark));
+        const copyBtnStyle = isFamilyCopied
+            ? 'bg-indigo-50/90 hover:bg-indigo-100 text-indigo-800 border-indigo-300'
+            : 'bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 text-slate-800 hover:text-indigo-700 border-slate-300';
+        const copyBadgeText = isFamilyCopied ? '(Copied ✓)' : '(Copy)';
+
         const cardHtml = `
             <div class="family-card p-5 bg-white hover:bg-slate-50/50 transition duration-150 space-y-3.5 border-b border-slate-200">
                 <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-3">
                     <div class="flex flex-wrap items-center gap-2">
                         <!-- Copy Family ID Button -->
-                        <button onclick="copyFamilyId('${safeFamId}', this)" title="Click to copy Family ID to clipboard" class="group flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 text-slate-800 hover:text-indigo-700 border border-slate-300 rounded-xl shadow-2xs font-mono font-bold text-xs transition cursor-pointer">
+                        <button onclick="copyFamilyId('${safeFamId}', this)" title="Click to copy Family ID to clipboard" class="group flex items-center gap-1.5 px-3 py-1.5 ${copyBtnStyle} border rounded-xl shadow-2xs font-mono font-bold text-xs transition cursor-pointer">
                             <span class="group-hover:scale-110 transition-transform">📋</span>
                             <span>Family ID: ${escapeHtml(fam.family_id)}</span>
-                            <span class="text-[10px] text-slate-400 group-hover:text-indigo-500 font-sans font-normal">(Copy)</span>
+                            <span class="text-[10px] ${isFamilyCopied ? 'text-indigo-600 font-bold' : 'text-slate-400 group-hover:text-indigo-500 font-normal'} font-sans">${copyBadgeText}</span>
                         </button>
 
                         <!-- Dial Mobile Phone -->
@@ -273,18 +302,43 @@ function updatePaginationControls(totalCount) {
     document.getElementById('nextBtn').disabled = currentPage >= maxPage;
 }
 
-function copyFamilyId(famId, btnEl) {
+async function copyFamilyId(famId, btnEl) {
     navigator.clipboard.writeText(famId);
-    const originalHtml = btnEl.innerHTML;
-    btnEl.innerHTML = `<span class="text-emerald-700 font-bold flex items-center gap-1">✓ Copied: ${famId}</span>`;
-    btnEl.classList.remove('bg-slate-50', 'border-slate-300');
+    btnEl.innerHTML = `<span class="text-emerald-700 font-bold flex items-center gap-1">✓ Copied: ${escapeHtml(famId)}</span>`;
+    btnEl.classList.remove('bg-slate-50', 'border-slate-300', 'bg-indigo-50/90', 'border-indigo-300');
     btnEl.classList.add('bg-emerald-50', 'border-emerald-500');
     showToast(`Copied Family ID: ${famId}`, 'success', 2000);
     setTimeout(() => {
-        btnEl.innerHTML = originalHtml;
+        btnEl.innerHTML = `
+            <span class="group-hover:scale-110 transition-transform">📋</span>
+            <span>Family ID: ${escapeHtml(famId)}</span>
+            <span class="text-[10px] text-indigo-600 font-bold font-sans">(Copied ✓)</span>
+        `;
         btnEl.classList.remove('bg-emerald-50', 'border-emerald-500');
-        btnEl.classList.add('bg-slate-50', 'border-slate-300');
+        btnEl.classList.add('bg-indigo-50/90', 'border-indigo-300', 'text-indigo-800');
     }, 1200);
+
+    // Persist copied state to Supabase (without touching updated_at so velocity/daily stats are unaffected)
+    try {
+        const authBlock = getAuthorizedBlock();
+        const famMembers = currentLoadedRecords.filter(r => String(r.family_id) === String(famId));
+        famMembers.forEach(m => {
+            m.remark = buildRemarkWithCopied(m.remark, COPIED_MARKER);
+        });
+
+        const sampleRemark = famMembers.length > 0 ? famMembers[0].remark : COPIED_MARKER;
+        let updQuery = supabaseClient
+            .from('bocw_members')
+            .update({ remark: sampleRemark })
+            .eq('family_id', String(famId));
+
+        if (authBlock && (authBlock !== 'ALL' || !isMasterAdmin())) {
+            updQuery = updQuery.eq('block_name', authBlock);
+        }
+        await updQuery;
+    } catch (err) {
+        console.warn('Could not log copied family ID:', err);
+    }
 }
 
 // Search Clear Helpers

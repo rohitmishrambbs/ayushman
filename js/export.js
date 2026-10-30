@@ -142,7 +142,7 @@ function generateMembersWorkbookAndDownload(data, fileName) {
             !isNaN(byNum) && byNum > 0 ? { t: 'n', v: byNum, z: '0' } : String(r.birth_year ?? ''),
             !isNaN(mobNum) && mobNum > 0 ? { t: 'n', v: mobNum, z: '0' } : String(r.mobile_no ?? ''),
             cleanStatus(r.STATUS),
-            String(r.remark ?? '')
+            cleanRemark(r.remark)
         ]);
     });
 
@@ -588,6 +588,126 @@ function exportDailyProgressExcel() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Daily_Progress_Report");
     const filename = `Azamgarh_BoCW_Daily_Progress_${reportDate}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    showToast(`Downloaded ${filename} successfully!`, "success", 3000);
+}
+
+function exportCopiedFamilyReportExcel() {
+    if (!isMasterAdmin()) {
+        showToast("Access Denied: Only ACMO Master can export this report.", "error");
+        return;
+    }
+
+    if (!cachedCopiedReport || !cachedCopiedReport.gpRows || cachedCopiedReport.gpRows.length === 0) {
+        showToast("No GP data loaded to export. Select a block first.", "warning");
+        return;
+    }
+
+    const scope = cachedCopiedReport.blockScope || 'ALL';
+    const scopeLabel = scope === 'ALL' ? 'All22Blocks' : scope.replace(/\s+/g, '_');
+
+    const gpHeaders = [
+        "S.No.",
+        "Block Name",
+        "Name of GP",
+        "Total Families in GP",
+        "Unique Family IDs Copied",
+        "Copied & Processed Families",
+        "Copied & Not Processed Families",
+        "Unique Copied Family IDs"
+    ];
+
+    const gpAoa = [gpHeaders];
+    let sumTotalFam = 0;
+    let sumCopied = 0;
+    let sumProc = 0;
+    let sumUnproc = 0;
+
+    cachedCopiedReport.gpRows.forEach((r, idx) => {
+        sumTotalFam += r.total_families;
+        sumCopied += r.copied_count;
+        sumProc += r.copied_processed;
+        sumUnproc += r.copied_unprocessed;
+
+        gpAoa.push([
+            { t: 'n', v: idx + 1, z: '0' },
+            String(r.block_name ?? ''),
+            String(r.gp_name ?? ''),
+            { t: 'n', v: r.total_families, z: '0' },
+            { t: 'n', v: r.copied_count, z: '0' },
+            { t: 'n', v: r.copied_processed, z: '0' },
+            { t: 'n', v: r.copied_unprocessed, z: '0' },
+            r.copied_family_ids.join(', ')
+        ]);
+    });
+
+    gpAoa.push([
+        "",
+        "TOTAL",
+        `${cachedCopiedReport.gpRows.length} GPs`,
+        { t: 'n', v: sumTotalFam, z: '0' },
+        { t: 'n', v: sumCopied, z: '0' },
+        { t: 'n', v: sumProc, z: '0' },
+        { t: 'n', v: sumUnproc, z: '0' },
+        ""
+    ]);
+
+    const wsGp = XLSX.utils.aoa_to_sheet(gpAoa);
+    wsGp['!cols'] = [
+        { wch: 8 },
+        { wch: 18 },
+        { wch: 26 },
+        { wch: 20 },
+        { wch: 24 },
+        { wch: 26 },
+        { wch: 28 },
+        { wch: 50 }
+    ];
+
+    const famHeaders = [
+        "S.No.",
+        "Block Name",
+        "Name of GP",
+        "Unique Copied Family ID",
+        "Mobile No",
+        "Total Members in Family",
+        "No. of Member Processed",
+        "No. of Member Not Processed"
+    ];
+
+    const famAoa = [famHeaders];
+    (cachedCopiedReport.familyRows || []).forEach((f, idx) => {
+        const famNum = Number(String(f.family_id ?? '').replace(/\D/g, ''));
+        const mobNum = Number(String(f.mobile_no ?? '').replace(/\D/g, ''));
+        famAoa.push([
+            { t: 'n', v: idx + 1, z: '0' },
+            String(f.block_name ?? ''),
+            String(f.gp_name ?? ''),
+            !isNaN(famNum) && famNum > 0 ? { t: 'n', v: famNum, z: '0' } : String(f.family_id ?? ''),
+            !isNaN(mobNum) && mobNum > 0 ? { t: 'n', v: mobNum, z: '0' } : String(f.mobile_no ?? ''),
+            { t: 'n', v: f.total_members, z: '0' },
+            { t: 'n', v: f.processed_members, z: '0' },
+            { t: 'n', v: f.not_processed_members, z: '0' }
+        ]);
+    });
+
+    const wsFam = XLSX.utils.aoa_to_sheet(famAoa);
+    wsFam['!cols'] = [
+        { wch: 8 },
+        { wch: 18 },
+        { wch: 26 },
+        { wch: 24 },
+        { wch: 16 },
+        { wch: 22 },
+        { wch: 24 },
+        { wch: 26 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, wsGp, "GP_Wise_Copied_Summary");
+    XLSX.utils.book_append_sheet(wb, wsFam, "Unique_Copied_Family_IDs");
+
+    const filename = `BoCW_${scopeLabel}_GP_Copied_Family_IDs.xlsx`;
     XLSX.writeFile(wb, filename);
     showToast(`Downloaded ${filename} successfully!`, "success", 3000);
 }

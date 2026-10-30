@@ -9,8 +9,10 @@ function switchAdminWorkspaceTab(tab) {
     const lbPanel = document.getElementById('adminTabPanelLeaderboard');
     const dailyPanel = document.getElementById('adminTabPanelDaily');
     const filterDrawer = document.getElementById('adminFilterDrawer');
+    const copiedPanel = document.getElementById('adminTabPanelCopied');
     const topCtrlLb = document.getElementById('adminTopCtrlLeaderboard');
     const topCtrlDaily = document.getElementById('adminTopCtrlDaily');
+    const topCtrlCopied = document.getElementById('adminTopCtrlCopied');
 
     if (viewSelect && viewSelect.value !== tab) {
         viewSelect.value = tab;
@@ -19,6 +21,7 @@ function switchAdminWorkspaceTab(tab) {
     if (lbPanel) lbPanel.classList.add('hidden');
     if (dailyPanel) dailyPanel.classList.add('hidden');
     if (filterDrawer) filterDrawer.classList.add('hidden');
+    if (copiedPanel) copiedPanel.classList.add('hidden');
     if (topCtrlLb) {
         topCtrlLb.classList.add('hidden');
         topCtrlLb.classList.remove('flex');
@@ -26,6 +29,10 @@ function switchAdminWorkspaceTab(tab) {
     if (topCtrlDaily) {
         topCtrlDaily.classList.add('hidden');
         topCtrlDaily.classList.remove('flex');
+    }
+    if (topCtrlCopied) {
+        topCtrlCopied.classList.add('hidden');
+        topCtrlCopied.classList.remove('flex');
     }
 
     if (tab === 'daily') {
@@ -37,6 +44,13 @@ function switchAdminWorkspaceTab(tab) {
     } else if (tab === 'filter') {
         if (filterDrawer) filterDrawer.classList.remove('hidden');
         updateAdminFilterMatchCount();
+    } else if (tab === 'copied') {
+        if (copiedPanel) copiedPanel.classList.remove('hidden');
+        if (topCtrlCopied) {
+            topCtrlCopied.classList.remove('hidden');
+            topCtrlCopied.classList.add('flex');
+        }
+        loadCopiedFamilyReport();
     } else {
         if (lbPanel) lbPanel.classList.remove('hidden');
         if (topCtrlLb) {
@@ -208,6 +222,10 @@ async function loadAdminLeaderboard() {
         }
 
         await loadDailyProgressReport();
+        const activeView = document.getElementById('adminViewSelector');
+        if (activeView && activeView.value === 'copied') {
+            await loadCopiedFamilyReport();
+        }
     } catch (err) {
         console.error("Leaderboard error:", err);
         tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-rose-600 font-semibold">Error: ${err.message}</td></tr>`;
@@ -623,5 +641,240 @@ async function checkSpeedAnomalies() {
         showToast(`Velocity audit error: ${err.message}`, "error");
     } finally {
         if (velocityBtn) velocityBtn.classList.remove('opacity-75');
+    }
+}
+
+function filterCopiedReportRows(query) {
+    const q = (query || '').trim().toLowerCase();
+    const rows = document.querySelectorAll('#copiedReportTableBody tr');
+    rows.forEach(tr => {
+        const text = tr.innerText.toLowerCase();
+        if (!q || text.includes(q)) {
+            tr.style.display = '';
+        } else {
+            tr.style.display = 'none';
+        }
+    });
+}
+
+async function loadCopiedFamilyReport() {
+    if (!isMasterAdmin()) return;
+
+    const blockSelect = document.getElementById('copiedReportBlockSelector');
+    const block = (blockSelect && blockSelect.value) ? blockSelect.value : 'MOHAMMADPUR';
+    const tbody = document.getElementById('copiedReportTableBody');
+    const subtitle = document.getElementById('copiedReportSubtitle');
+
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400">Scanning GP-wise unique copied Family IDs for <b>${block === 'ALL' ? 'All 22 Blocks' : block}</b>...</td></tr>`;
+    }
+    if (subtitle) {
+        subtitle.innerText = block === 'ALL'
+            ? 'Showing Gram Panchayats across all 22 Blocks where DEOs have copied Family IDs.'
+            : `Showing all Gram Panchayats in ${block} with unique Family IDs copied by DEO.`;
+    }
+
+    try {
+        const rows = [];
+        const chunkSize = 1000;
+        let offset = 0;
+
+        while (true) {
+            let query = supabaseClient
+                .from('bocw_members')
+                .select('block_name, gram_panchayat_name, family_id, member_id, mobile_no, STATUS, remark')
+                .not('member_id', 'ilike', 'EXTRA_%');
+
+            if (block === 'ALL') {
+                query = query.ilike('remark', '%[COPIED%');
+            } else {
+                query = query.eq('block_name', block);
+            }
+
+            const { data, error } = await query
+                .order('member_id', { ascending: true })
+                .range(offset, offset + chunkSize - 1);
+
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+
+            rows.push(...data);
+            if (data.length < chunkSize) break;
+            offset += chunkSize;
+        }
+
+        // Group by Block + GP -> Family ID
+        const gpMap = new Map();
+        const copiedFamilyMap = new Map();
+
+        rows.forEach(r => {
+            if (String(r.member_id ?? '').startsWith('EXTRA_')) return;
+            const blk = String(r.block_name ?? '').trim() || 'UNKNOWN';
+            const gp = String(r.gram_panchayat_name ?? 'UNKNOWN').trim() || 'UNKNOWN';
+            const famId = String(r.family_id ?? '').trim();
+            if (!famId) return;
+
+            const gpKey = `${blk}__${gp}`;
+            if (!gpMap.has(gpKey)) {
+                gpMap.set(gpKey, {
+                    block_name: blk,
+                    gp_name: gp,
+                    all_families: new Set(),
+                    copied_families: new Map() // famId -> { hasProcessed: boolean, statuses: Set }
+                });
+            }
+
+            const gpEntry = gpMap.get(gpKey);
+            gpEntry.all_families.add(famId);
+
+            const statusVal = cleanStatus(r.STATUS);
+            const isProcessed = statusVal !== 'Not Applied';
+            const copied = isRecordCopied(r.remark);
+
+            if (copied) {
+                if (!gpEntry.copied_families.has(famId)) {
+                    gpEntry.copied_families.set(famId, {
+                        family_id: famId,
+                        block_name: blk,
+                        gp_name: gp,
+                        mobile_no: String(r.mobile_no ?? ''),
+                        total_members: 0,
+                        processed_members: 0,
+                        not_processed_members: 0,
+                        has_processed: false
+                    });
+                }
+                const famObj = gpEntry.copied_families.get(famId);
+                famObj.total_members += 1;
+                if (isProcessed) {
+                    famObj.processed_members += 1;
+                    famObj.has_processed = true;
+                } else {
+                    famObj.not_processed_members += 1;
+                }
+                copiedFamilyMap.set(`${gpKey}__${famId}`, famObj);
+            }
+        });
+
+        const gpRows = Array.from(gpMap.values()).map(g => {
+            const copiedFams = Array.from(g.copied_families.values());
+            let copiedProcessed = 0;
+            let copiedUnprocessed = 0;
+            copiedFams.forEach(f => {
+                if (f.has_processed) copiedProcessed += 1;
+                else copiedUnprocessed += 1;
+            });
+            return {
+                block_name: g.block_name,
+                gp_name: g.gp_name,
+                total_families: g.all_families.size,
+                copied_count: copiedFams.length,
+                copied_processed: copiedProcessed,
+                copied_unprocessed: copiedUnprocessed,
+                copied_family_ids: copiedFams.map(f => f.family_id).sort()
+            };
+        }).sort((a, b) => {
+            if (b.copied_count !== a.copied_count) return b.copied_count - a.copied_count;
+            const blkCmp = a.block_name.localeCompare(b.block_name);
+            if (blkCmp !== 0) return blkCmp;
+            return a.gp_name.localeCompare(b.gp_name);
+        });
+
+        const familyRows = Array.from(copiedFamilyMap.values()).sort((a, b) => {
+            const blkCmp = a.block_name.localeCompare(b.block_name);
+            if (blkCmp !== 0) return blkCmp;
+            const gpCmp = a.gp_name.localeCompare(b.gp_name);
+            if (gpCmp !== 0) return gpCmp;
+            return a.family_id.localeCompare(b.family_id);
+        });
+
+        cachedCopiedReport = {
+            gpRows,
+            familyRows,
+            blockScope: block
+        };
+
+        let totalCopiedFams = 0;
+        let totalCopiedProc = 0;
+        let totalCopiedUnproc = 0;
+        gpRows.forEach(r => {
+            totalCopiedFams += r.copied_count;
+            totalCopiedProc += r.copied_processed;
+            totalCopiedUnproc += r.copied_unprocessed;
+        });
+
+        document.getElementById('copiedStatGPs').innerText = gpRows.length.toLocaleString();
+        document.getElementById('copiedStatFamilies').innerText = totalCopiedFams.toLocaleString();
+        document.getElementById('copiedStatProcessed').innerText = totalCopiedProc.toLocaleString();
+        document.getElementById('copiedStatUnprocessed').innerText = totalCopiedUnproc.toLocaleString();
+
+        if (!tbody) return;
+
+        if (gpRows.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="p-10 text-center text-slate-500">
+                        <p class="font-bold text-slate-700">No copied Family IDs recorded yet for ${block === 'ALL' ? 'any block' : block}.</p>
+                        <p class="text-xs text-slate-400 mt-1">Select a specific Block from the dropdown above to see all its GPs, or click "📋 Family ID (Copy)" in the DEO Terminal.</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = '';
+        gpRows.forEach((row, idx) => {
+            const tr = document.createElement('tr');
+            tr.className = row.copied_count > 0
+                ? "bg-indigo-50/20 hover:bg-indigo-50/70 cursor-pointer transition"
+                : "hover:bg-slate-50 cursor-pointer transition";
+            tr.title = `Click to open ${row.block_name} -> ${row.gp_name} in DEO Terminal`;
+            tr.onclick = async () => {
+                if (!isMasterAdmin()) return;
+                document.getElementById('blockSelector').value = row.block_name;
+                document.getElementById('statusFilter').value = 'ALL';
+                document.getElementById('searchInput').value = '';
+                switchRole('deo');
+                currentPage = 1;
+                await loadGPDropdown();
+                document.getElementById('gpSelector').value = row.gp_name;
+                await loadBlockData();
+                showToast(`Opened ${row.gp_name} (${row.block_name})`, 'info', 2000);
+            };
+
+            const famBadgesHtml = row.copied_family_ids.length > 0
+                ? `<div class="flex flex-wrap gap-1 max-w-md">` +
+                  row.copied_family_ids.slice(0, 8).map(fid =>
+                      `<span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200 font-mono text-[11px] font-bold">${escapeHtml(fid)}</span>`
+                  ).join('') +
+                  (row.copied_family_ids.length > 8
+                      ? `<span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-mono text-[11px] font-bold">+${row.copied_family_ids.length - 8} more</span>`
+                      : '') +
+                  `</div>`
+                : `<span class="text-xs text-slate-400 italic">0 copied</span>`;
+
+            tr.innerHTML = `
+                <td class="p-3.5 font-bold text-slate-700 whitespace-nowrap">${idx + 1}. ${escapeHtml(row.block_name)}</td>
+                <td class="p-3.5 font-bold text-slate-900">${escapeHtml(row.gp_name)}</td>
+                <td class="p-3.5 text-right font-mono text-slate-600">${row.total_families.toLocaleString()}</td>
+                <td class="p-3.5 text-right font-mono font-black text-base ${row.copied_count > 0 ? 'text-indigo-700' : 'text-slate-400'}">
+                    ${row.copied_count.toLocaleString()}
+                </td>
+                <td class="p-3.5 text-right font-mono font-bold text-emerald-700">${row.copied_processed.toLocaleString()}</td>
+                <td class="p-3.5 text-right font-mono font-semibold text-amber-700">${row.copied_unprocessed.toLocaleString()}</td>
+                <td class="p-3.5">${famBadgesHtml}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        const searchInput = document.getElementById('copiedReportSearchInput');
+        if (searchInput && searchInput.value) {
+            filterCopiedReportRows(searchInput.value);
+        }
+    } catch (err) {
+        console.error("Copied Family ID report error:", err);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-rose-600 font-semibold">Error loading report: ${err.message}</td></tr>`;
+        }
     }
 }

@@ -470,6 +470,7 @@
                                     <option value="leaderboard" selected>📊 1. Overall 22-Block Leaderboard</option>
                                     <option value="daily">📅 2. Daily Card Approval Progress Report</option>
                                     <option value="filter">🗂️ 3. District Custom Filter &amp; Exporter</option>
+                                    <option value="copied">📋 4. GP-Wise Unique Family ID Copied Report</option>
                                 </select>
                             </div>
 
@@ -524,6 +525,31 @@
                                 <button onclick="exportDailyProgressExcel()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs active:scale-95 cursor-pointer">
                                     <span>📥</span>
                                     <span>Download Daily Report (.xlsx)</span>
+                                </button>
+                            </div>
+
+                            <!-- Context Control C: GP-Wise Copied Family IDs Block Selector + Excel Button -->
+                            <div id="adminTopCtrlCopied" class="hidden flex-wrap items-center gap-2">
+                                <div class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1">
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase">Block:</span>
+                                    <select
+                                        id="copiedReportBlockSelector"
+                                        onchange="loadCopiedFamilyReport()"
+                                        class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+                                    >
+                                        <option value="ALL">🌐 ALL 22 BLOCKS (Copied GPs)</option>
+                                    </select>
+                                </div>
+                                <input
+                                    type="text"
+                                    id="copiedReportSearchInput"
+                                    oninput="filterCopiedReportRows(this.value)"
+                                    placeholder="🔍 Filter GP or Family ID..."
+                                    class="w-44 sm:w-52 px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white font-semibold"
+                                >
+                                <button onclick="exportCopiedFamilyReportExcel()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs active:scale-95 cursor-pointer">
+                                    <span>📥</span>
+                                    <span>Download Copied IDs (.xlsx)</span>
                                 </button>
                             </div>
 
@@ -719,6 +745,47 @@
                             </thead>
                             <tbody id="dailyProgressTableBody" class="divide-y divide-slate-100 text-sm">
                                 <tr><td colspan="8" class="p-8 text-center text-slate-400">Loading block-wise card approval report...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 5. VIEW OPTION 4: GP-Wise Unique Family ID Copied Report -->
+                <div id="adminTabPanelCopied" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden">
+                    <!-- Compact Copied Summary Strip -->
+                    <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                        <p class="text-xs font-semibold text-slate-600" id="copiedReportSubtitle">GP-wise unique Family IDs copied by DEOs for PM-JAY verification.</p>
+                        <div class="flex flex-wrap items-center gap-2.5 text-xs">
+                            <span class="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-300 text-slate-800 font-bold">
+                                GPs Listed: <strong id="copiedStatGPs" class="font-mono">--</strong>
+                            </span>
+                            <span class="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-800 font-bold">
+                                Unique Family IDs Copied: <strong id="copiedStatFamilies" class="font-mono">--</strong>
+                            </span>
+                            <span class="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold">
+                                Copied &amp; Processed: <strong id="copiedStatProcessed" class="font-mono">--</strong>
+                            </span>
+                            <span class="px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 font-bold">
+                                Copied &amp; Not Processed: <strong id="copiedStatUnprocessed" class="font-mono">--</strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 bg-slate-100 text-slate-600 text-xs uppercase font-bold">
+                                    <th class="p-3.5"># &amp; Block</th>
+                                    <th class="p-3.5">Gram Panchayat (Name of GP)</th>
+                                    <th class="p-3.5 text-right text-slate-700">Total Families</th>
+                                    <th class="p-3.5 text-right text-indigo-700">Unique Family IDs Copied</th>
+                                    <th class="p-3.5 text-right text-emerald-700">Copied &amp; Processed</th>
+                                    <th class="p-3.5 text-right text-amber-700">Copied &amp; Not Processed</th>
+                                    <th class="p-3.5">Copied Unique Family IDs</th>
+                                </tr>
+                            </thead>
+                            <tbody id="copiedReportTableBody" class="divide-y divide-slate-100 text-sm">
+                                <tr><td colspan="7" class="p-8 text-center text-slate-400">Select a block to view GP-wise unique copied Family IDs...</td></tr>
                             </tbody>
                         </table>
                     </div>
