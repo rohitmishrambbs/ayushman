@@ -163,6 +163,7 @@ function logoutPortalUser() {
 
 function configureBlockSelectorForSession(session) {
     const blockSelector = document.getElementById('blockSelector');
+    const adminBlockSelector = document.getElementById('adminBlockSelector');
     const modeSwitcher = document.getElementById('modeSwitcherContainer');
     const userBadge = document.getElementById('loggedInUserBadge');
 
@@ -180,13 +181,25 @@ function configureBlockSelectorForSession(session) {
             userBadge.innerHTML = `<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-400"></span>🔒 DEO: ${session.assigned_block}</span>`;
         }
     } else {
-        // Master Admin (ACMO) - Populate all 22 blocks
+        // Master Admin (ACMO) - Populate ALL 22 BLOCKS + individual blocks in both selectors
         const previousVal = blockSelector.value || 'MOHAMMADPUR';
-        blockSelector.innerHTML = ALL_BLOCKS_META.map(b =>
+        const allOptionHtml = `<option value="ALL" ${previousVal === 'ALL' ? 'selected' : ''}>🌐 ALL 22 BLOCKS (Entire District - 70,673)</option>`;
+        const blocksOptionsHtml = ALL_BLOCKS_META.map(b =>
             `<option value="${b.name}" ${b.name === previousVal ? 'selected' : ''}>${b.label}</option>`
         ).join('');
+
+        blockSelector.innerHTML = allOptionHtml + blocksOptionsHtml;
         blockSelector.disabled = false;
         blockSelector.classList.remove('opacity-80', 'cursor-not-allowed');
+
+        if (adminBlockSelector) {
+            const prevAdminBlock = adminBlockSelector.value || 'ALL';
+            adminBlockSelector.innerHTML =
+                `<option value="ALL" ${prevAdminBlock === 'ALL' ? 'selected' : ''}>🌐 ALL 22 BLOCKS (Entire District - 70,673)</option>` +
+                ALL_BLOCKS_META.map(b =>
+                    `<option value="${b.name}" ${b.name === prevAdminBlock ? 'selected' : ''}>${b.label}</option>`
+                ).join('');
+        }
 
         if (modeSwitcher) modeSwitcher.classList.remove('hidden');
         if (userBadge) {

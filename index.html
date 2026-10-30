@@ -414,7 +414,7 @@
                             <span id="recordCount" class="text-xs font-semibold text-slate-600 bg-slate-200/70 px-2.5 py-0.5 rounded-full border border-slate-300/60">Loading...</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="exportCampCallListExcel()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow-emerald-600/30 active:scale-95 transition cursor-pointer">
+                            <button id="terminalExportBtn" onclick="exportCampCallListExcel()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow-emerald-600/30 active:scale-95 transition cursor-pointer">
                                 <span>📥</span>
                                 <span>Download List (.xlsx)</span>
                             </button>
@@ -523,6 +523,153 @@
                             <p class="text-2xl font-black text-indigo-900 mt-2 font-mono tracking-tight" id="statExtraAdded">--</p>
                             <p class="text-[11px] text-indigo-700 mt-1 font-medium">New PM-JAY members</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- ACMO District-Wide Filter & Filtered Excel Export Panel -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-5 space-y-4">
+                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 border-b border-slate-100 pb-3.5">
+                        <div>
+                            <span class="inline-block bg-emerald-50 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-md mb-1 uppercase tracking-wider">District-Wide Custom Data Filter &amp; Exporter</span>
+                            <h3 class="text-base font-bold text-slate-900">Filter District / Block Records &amp; Download Custom Excel (.xlsx)</h3>
+                            <p class="text-xs text-slate-500">Filter across all 22 Blocks (or any single Block/GP), Status, or Name/Family ID/Mobile and download the exact filtered dataset.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2.5 self-stretch lg:self-center">
+                            <span id="adminFilterCountBadge" class="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-2 rounded-lg">
+                                Matching Records: Calculating...
+                            </span>
+                            <button onclick="openFilteredInTerminal()" class="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition cursor-pointer">
+                                🔍 View / Edit in Terminal
+                            </button>
+                            <button id="adminFilteredExportBtn" onclick="exportAdminFilteredExcel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition shadow-md shadow-emerald-600/20 cursor-pointer">
+                                📥 Download Filtered District Data (.xlsx)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+                        <div class="lg:col-span-3">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">1. Select Block (or Entire District)</label>
+                            <select id="adminBlockSelector" onchange="onAdminBlockFilterChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="ALL" selected>🌐 ALL 22 BLOCKS (Entire District - 70,673)</option>
+                            </select>
+                        </div>
+
+                        <div class="lg:col-span-3">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">2. Gram Panchayat (GP)</label>
+                            <select id="adminGpSelector" onchange="updateAdminFilterMatchCount()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="ALL">All Gram Panchayats (District-Wide)</option>
+                            </select>
+                        </div>
+
+                        <div class="lg:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">3. Status Filter</label>
+                            <select id="adminStatusFilter" onchange="updateAdminFilterMatchCount()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="ALL" selected>All Statuses</option>
+                                <option value="Not Applied">Not Applied</option>
+                                <option value="Approved">Approved</option>
+                                <option value="Portal Pending">Portal Pending</option>
+                                <option value="No Record Found">No Record Found</option>
+                                <option value="Not Traceable">Not Traceable</option>
+                                <option value="EXTRA_ONLY">✨ Extra Added Members Only</option>
+                            </select>
+                        </div>
+
+                        <div class="lg:col-span-4">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">4. Search District (Name, Family ID, Mobile)</label>
+                            <div class="flex gap-2">
+                                <div class="relative w-full">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
+                                        </svg>
+                                    </span>
+                                    <input type="text" id="adminSearchInput" onkeydown="if(event.key==='Enter') updateAdminFilterMatchCount()" placeholder="Search Name, Family ID, Mobile across District..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/80 focus:border-indigo-500 focus:bg-white focus:shadow-sm">
+                                </div>
+                                <button onclick="updateAdminFilterMatchCount()" class="group relative inline-flex items-center justify-center gap-2 px-5 py-2 btn-search-cool text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-500/25 hover:shadow-lg hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 shrink-0 overflow-hidden cursor-pointer">
+                                    <span class="absolute inset-0 w-full h-full btn-search-shimmer"></span>
+                                    <svg class="w-4 h-4 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
+                                    </svg>
+                                    <span class="relative tracking-wide">Search</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 22-Block Daily Card Approval Progress Report -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="inline-block bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Daily Monitoring</span>
+                                <h3 class="font-bold text-slate-900 text-base">Block-Wise Daily Card Approval Progress Report</h3>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-0.5" id="dailyReportSubtitle">Real-time count of cards approved and processed by each of the 22 Blocks on the selected date (IST).</p>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="setDailyReportDateOffset(0)" class="px-2.5 py-1.5 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-300 rounded-lg text-xs font-bold transition cursor-pointer">Today</button>
+                            <button onclick="setDailyReportDateOffset(-1)" class="px-2.5 py-1.5 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-300 rounded-lg text-xs font-bold transition cursor-pointer">Yesterday</button>
+                            <input
+                                type="date"
+                                id="dailyProgressDate"
+                                onchange="loadDailyProgressReport()"
+                                class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                            <button onclick="loadDailyProgressReport()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition cursor-pointer">
+                                🔄 Refresh
+                            </button>
+                            <button onclick="exportDailyProgressExcel()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer">
+                                📥 Download Daily Report (.xlsx)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Daily KPI Summary Row -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-slate-50/60 border-b border-slate-200">
+                        <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl">
+                            <p class="text-[11px] font-bold text-emerald-700 uppercase">Cards Approved on Date</p>
+                            <p class="text-2xl font-black text-emerald-900 mt-0.5 font-mono" id="dailyStatApproved">--</p>
+                            <p class="text-xs text-emerald-700 mt-0.5 font-medium" id="dailyStatApprovedSub">Base + Extra Approved</p>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-xl">
+                            <p class="text-[11px] font-bold text-amber-700 uppercase">Portal Pending on Date</p>
+                            <p class="text-2xl font-black text-amber-900 mt-0.5 font-mono" id="dailyStatPending">--</p>
+                            <p class="text-xs text-amber-700 mt-0.5">Submitted &amp; awaiting approval</p>
+                        </div>
+                        <div class="bg-indigo-50 border border-indigo-200 p-3.5 rounded-xl">
+                            <p class="text-[11px] font-bold text-indigo-700 uppercase">Total Processed on Date</p>
+                            <p class="text-2xl font-black text-indigo-900 mt-0.5 font-mono" id="dailyStatProcessed">--</p>
+                            <p class="text-xs text-indigo-700 mt-0.5" id="dailyStatFamilies">-- Families Touched</p>
+                        </div>
+                        <div class="bg-rose-50 border border-rose-200 p-3.5 rounded-xl">
+                            <p class="text-[11px] font-bold text-rose-700 uppercase">Block Participation</p>
+                            <p class="text-2xl font-black text-rose-900 mt-0.5 font-mono" id="dailyStatActiveBlocks">-- / 22</p>
+                            <p class="text-xs text-rose-700 mt-0.5" id="dailyStatZeroBlocks">-- Blocks with 0 Approvals</p>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 bg-slate-100 text-slate-600 text-xs uppercase font-bold">
+                                    <th class="p-3.5">Rank &amp; Block</th>
+                                    <th class="p-3.5 text-right text-emerald-700">Approved (Date)</th>
+                                    <th class="p-3.5 text-right text-indigo-700">Base / +Extra</th>
+                                    <th class="p-3.5 text-right text-amber-700">Portal Pending (Date)</th>
+                                    <th class="p-3.5 text-right text-rose-700">Excluded / No Rec (Date)</th>
+                                    <th class="p-3.5 text-right text-slate-800">Total Updated (Date)</th>
+                                    <th class="p-3.5 text-right text-slate-600">Families Touched</th>
+                                    <th class="p-3.5 text-right text-slate-700">Cumulative Approved</th>
+                                    <th class="p-3.5 text-center">Daily Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dailyProgressTableBody" class="divide-y divide-slate-100 text-sm">
+                                <tr><td colspan="9" class="p-8 text-center text-slate-400">Loading daily block-wise card approval report...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 

@@ -109,10 +109,17 @@ function renderFamilyGroups(records, totalCount) {
     countLabel.innerText = `Showing ${records.length} of ${totalCount.toLocaleString()} Members (${familiesMap.size} Families on Page ${currentPage})`;
     container.innerHTML = '';
 
+    const isDistrictWide = getAuthorizedBlock() === 'ALL';
+
     familiesMap.forEach(fam => {
         const cleanPhone = fam.mobile_no.replace(/\D/g, '');
+        const safeBlock = fam.block_name.replace(/'/g, "\\'");
         const safeGp = fam.gp_name.replace(/'/g, "\\'");
         const safeMob = fam.mobile_no.replace(/'/g, "\\'");
+
+        const blockBadgeHtml = isDistrictWide
+            ? `<span class="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 border border-indigo-300 text-xs font-bold px-2.5 py-1.5 rounded-xl">Block: ${fam.block_name}</span>`
+            : '';
 
         const membersHtml = fam.members.map((m, idx) => {
             const memId = String(m.member_id ?? '');
@@ -203,6 +210,8 @@ function renderFamilyGroups(records, totalCount) {
                             <span class="text-[10px] opacity-90 font-sans font-normal">(Call)</span>
                         </a>
 
+                        ${blockBadgeHtml}
+
                         <!-- GP Badge -->
                         <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold px-2.5 py-1.5 rounded-xl">
                             <span>📍</span>
@@ -210,7 +219,7 @@ function renderFamilyGroups(records, totalCount) {
                         </span>
 
                         <!-- + Add Member Button -->
-                        <button onclick="openAddMemberModal('${fam.family_id}', '${fam.block_name}', '${safeGp}', '${safeMob}')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-2xs hover:shadow-indigo-600/30 transition cursor-pointer active:scale-95">
+                        <button onclick="openAddMemberModal('${fam.family_id}', '${safeBlock}', '${safeGp}', '${safeMob}')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-2xs hover:shadow-indigo-600/30 transition cursor-pointer active:scale-95">
                             <span>＋</span>
                             <span>Add Member</span>
                         </button>
@@ -281,14 +290,15 @@ function clearSearchInput() {
 
 // Modal Open/Close Helpers
 function openAddMemberModal(familyId, blockName, gpName, mobileNo) {
-    const activeBlock = getAuthorizedBlock() || blockName;
+    const authBlock = getAuthorizedBlock();
+    const resolvedBlock = (authBlock && authBlock !== 'ALL') ? authBlock : blockName;
     pendingAddFamilyContext = {
         family_id: String(familyId),
-        block_name: String(activeBlock),
+        block_name: String(resolvedBlock),
         gp_name: String(gpName),
         mobile_no: String(mobileNo)
     };
-    document.getElementById('addModalFamilyLabel').innerText = `Family ID: ${familyId} • GP: ${gpName}`;
+    document.getElementById('addModalFamilyLabel').innerText = `Family ID: ${familyId} • Block: ${resolvedBlock} • GP: ${gpName}`;
     document.getElementById('newMemberName').value = '';
     document.getElementById('newMemberStatus').value = 'Approved';
     document.getElementById('addMemberModal').classList.remove('hidden');

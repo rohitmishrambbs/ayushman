@@ -8,6 +8,12 @@ async function loadGPDropdown() {
     const block = getAuthorizedBlock();
     if (!block) return;
     const gpSelect = document.getElementById('gpSelector');
+
+    if (block === 'ALL') {
+        gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats (District-Wide)</option>`;
+        return;
+    }
+
     gpSelect.innerHTML = `<option value="ALL">Loading GPs for ${block}...</option>`;
 
     try {
@@ -46,7 +52,8 @@ async function loadBlockData() {
     const block = getAuthorizedBlock();
     if (!block) return;
 
-    document.getElementById('activeBlockTitle').innerText = `${block} Block Terminal`;
+    const displayBlockTitle = block === 'ALL' ? 'ALL 22 BLOCKS (District-Wide)' : block;
+    document.getElementById('activeBlockTitle').innerText = `${displayBlockTitle} Block Terminal`;
 
     const gp = document.getElementById('gpSelector').value;
     const statusFilter = document.getElementById('statusFilter').value;
@@ -60,10 +67,13 @@ async function loadBlockData() {
 
         let query = supabaseClient
             .from('bocw_members')
-            .select('*', { count: 'exact' })
-            .eq('block_name', block);
+            .select('*', { count: 'exact' });
 
-        if (gp !== 'ALL') {
+        if (block !== 'ALL') {
+            query = query.eq('block_name', block);
+        }
+
+        if (gp !== 'ALL' && block !== 'ALL') {
             query = query.eq('gram_panchayat_name', gp);
         }
 
@@ -122,7 +132,34 @@ async function updateBlockSummaryBar(block) {
         const { data, error } = await supabaseClient.rpc('get_block_leaderboard');
         if (error || !data) return;
 
-        const row = data.find(r => r.block_name === authorizedBlock);
+        let row;
+        if (authorizedBlock === 'ALL') {
+            row = data.reduce((acc, r) => {
+                acc.total_members += Number(r.total_members || 0);
+                acc.total_families += Number(r.total_families || 0);
+                acc.approved_members += Number(r.approved_members || 0);
+                acc.pending_members += Number(r.pending_members || 0);
+                acc.not_applied_members += Number(r.not_applied_members || 0);
+                acc.unidentified_members += Number(r.unidentified_members || 0);
+                acc.no_record_members += Number(r.no_record_members || 0);
+                acc.not_traceable_members += Number(r.not_traceable_members || 0);
+                acc.extra_added_members += Number(r.extra_added_members || 0);
+                return acc;
+            }, {
+                total_members: 0,
+                total_families: 0,
+                approved_members: 0,
+                pending_members: 0,
+                not_applied_members: 0,
+                unidentified_members: 0,
+                no_record_members: 0,
+                not_traceable_members: 0,
+                extra_added_members: 0
+            });
+        } else {
+            row = data.find(r => r.block_name === authorizedBlock);
+        }
+
         if (!row) return;
 
         const notAppliedTotal = Number(row.not_applied_members || 0) + Number(row.unidentified_members || 0);
@@ -196,8 +233,12 @@ async function updateBlockSummaryBar(block) {
 
 async function confirmAddMember() {
     if (!pendingAddFamilyContext) return;
-    const block = getAuthorizedBlock();
-    if (!block) return;
+    const authBlock = getAuthorizedBlock();
+    if (!authBlock) return;
+
+    const targetBlock = (authBlock === 'ALL' && isMasterAdmin())
+        ? pendingAddFamilyContext.block_name
+        : authBlock;
 
     const nameInput = document.getElementById('newMemberName').value.trim().toUpperCase();
     const statusInput = document.getElementById('newMemberStatus').value;
@@ -216,7 +257,7 @@ async function confirmAddMember() {
     const newRecord = {
         family_id: pendingAddFamilyContext.family_id,
         member_id: internalKey,
-        block_name: block,
+        block_name: targetBlock,
         gram_panchayat_name: pendingAddFamilyContext.gp_name,
         mobile_no: pendingAddFamilyContext.mobile_no,
         member_name: nameInput,
@@ -238,7 +279,7 @@ async function confirmAddMember() {
         currentLoadedRecords.push(newRecord);
         closeAddMemberModal();
         renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
-        updateBlockSummaryBar(block);
+        updateBlockSummaryBar(authBlock);
         statusText.innerText = `✓ Added ${nameInput}`;
         showToast(`Member "${nameInput}" added to Family ${newRecord.family_id}`, "success");
     } catch (err) {
@@ -252,24 +293,28 @@ async function confirmAddMember() {
 
 async function deleteExtraMember(internalMemberId, memberName) {
     if (!String(internalMemberId).startsWith('EXTRA_')) return;
-    const block = getAuthorizedBlock();
-    if (!block) return;
+    const authBlock = getAuthorizedBlock();
+    if (!authBlock) return;
     if (!confirm(`Remove added member "${memberName}" from this family?`)) return;
 
     const statusText = document.getElementById('syncStatusText');
     try {
         statusText.innerText = "Removing...";
-        const { error } = await supabaseClient
+        let delQuery = supabaseClient
             .from('bocw_members')
             .delete()
-            .eq('member_id', String(internalMemberId))
-            .eq('block_name', block);
+            .eq('member_id', String(internalMemberId));
 
+        if (authBlock !== 'ALL' || !isMasterAdmin()) {
+            delQuery = delQuery.eq('block_name', authBlock);
+        }
+
+        const { error } = await delQuery;
         if (error) throw error;
 
         currentLoadedRecords = currentLoadedRecords.filter(r => String(r.member_id) !== String(internalMemberId));
         renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
-        updateBlockSummaryBar(block);
+        updateBlockSummaryBar(authBlock);
         statusText.innerText = "✓ Removed Extra Member";
         showToast(`Removed member "${memberName}"`, "info");
     } catch (err) {
@@ -323,27 +368,35 @@ async function confirmNotTraceable() {
 }
 
 async function saveMemberStatus(memberId, status, remark) {
-    const block = getAuthorizedBlock();
-    if (!block) return;
+    const authBlock = getAuthorizedBlock();
+    if (!authBlock) return;
     const statusText = document.getElementById('syncStatusText');
     try {
         statusText.innerText = `Saving...`;
-        let { error } = await supabaseClient
+        let updQuery = supabaseClient
             .from('bocw_members')
             .update({
                 STATUS: status,
                 remark: remark,
                 updated_at: new Date().toISOString()
             })
-            .eq('member_id', String(memberId))
-            .eq('block_name', block);
+            .eq('member_id', String(memberId));
+
+        if (authBlock !== 'ALL' || !isMasterAdmin()) {
+            updQuery = updQuery.eq('block_name', authBlock);
+        }
+
+        let { error } = await updQuery;
 
         if (error) {
-            const fallback = await supabaseClient
+            let fallbackQuery = supabaseClient
                 .from('bocw_members')
                 .update({ STATUS: status })
-                .eq('member_id', String(memberId))
-                .eq('block_name', block);
+                .eq('member_id', String(memberId));
+            if (authBlock !== 'ALL' || !isMasterAdmin()) {
+                fallbackQuery = fallbackQuery.eq('block_name', authBlock);
+            }
+            const fallback = await fallbackQuery;
             if (fallback.error) throw fallback.error;
         }
 
@@ -355,7 +408,7 @@ async function saveMemberStatus(memberId, status, remark) {
 
         statusText.innerText = `✓ Saved Status`;
         renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
-        updateBlockSummaryBar(block);
+        updateBlockSummaryBar(authBlock);
         showToast(`Updated status: ${status}`, status === 'Approved' ? 'success' : 'info', 1800);
     } catch (err) {
         showToast(`Failed to save status: ${err.message}`, "error");
@@ -371,27 +424,35 @@ async function toggleFamilyStatus(familyId, clickedStatus) {
 }
 
 async function saveFamilyStatus(familyId, status, remark) {
-    const block = getAuthorizedBlock();
-    if (!block) return;
+    const authBlock = getAuthorizedBlock();
+    if (!authBlock) return;
     const statusText = document.getElementById('syncStatusText');
     try {
         statusText.innerText = `Updating Family ${familyId}...`;
-        let { error } = await supabaseClient
+        let updQuery = supabaseClient
             .from('bocw_members')
             .update({
                 STATUS: status,
                 remark: remark,
                 updated_at: new Date().toISOString()
             })
-            .eq('family_id', String(familyId))
-            .eq('block_name', block);
+            .eq('family_id', String(familyId));
+
+        if (authBlock !== 'ALL' || !isMasterAdmin()) {
+            updQuery = updQuery.eq('block_name', authBlock);
+        }
+
+        let { error } = await updQuery;
 
         if (error) {
-            const fallback = await supabaseClient
+            let fallbackQuery = supabaseClient
                 .from('bocw_members')
                 .update({ STATUS: status })
-                .eq('family_id', String(familyId))
-                .eq('block_name', block);
+                .eq('family_id', String(familyId));
+            if (authBlock !== 'ALL' || !isMasterAdmin()) {
+                fallbackQuery = fallbackQuery.eq('block_name', authBlock);
+            }
+            const fallback = await fallbackQuery;
             if (fallback.error) throw fallback.error;
         }
 
@@ -404,7 +465,7 @@ async function saveFamilyStatus(familyId, status, remark) {
 
         statusText.innerText = `✓ Saved Family ${familyId}`;
         renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
-        updateBlockSummaryBar(block);
+        updateBlockSummaryBar(authBlock);
         showToast(`Family ${familyId} marked as ${status}`, status === 'Approved' ? 'success' : 'info', 2200);
     } catch (err) {
         showToast(`Failed to update Family: ${err.message}`, "error");

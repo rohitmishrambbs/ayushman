@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * ACMO District Command View - Leaderboard & Velocity Audit
+ * ACMO District Command View - Leaderboard, Daily Progress, Filter & Audit
  * ============================================================================
  */
 
@@ -17,9 +17,34 @@ function filterLeaderboardRows(query) {
     });
 }
 
+function getIstDateString(offsetDays = 0) {
+    const now = new Date();
+    // Convert current time to IST (+05:30)
+    const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const istDate = new Date(utcMs + (5.5 * 3600000) + (offsetDays * 86400000));
+    const yyyy = istDate.getFullYear();
+    const mm = String(istDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(istDate.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+function setDailyReportDateOffset(offsetDays) {
+    if (!isMasterAdmin()) return;
+    const dateInput = document.getElementById('dailyProgressDate');
+    if (dateInput) {
+        dateInput.value = getIstDateString(offsetDays);
+    }
+    loadDailyProgressReport();
+}
+
 async function loadAdminLeaderboard() {
     if (!isMasterAdmin()) {
         return;
+    }
+
+    const dateInput = document.getElementById('dailyProgressDate');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = getIstDateString(0);
     }
 
     const tbody = document.getElementById('leaderboardTableBody');
@@ -33,6 +58,8 @@ async function loadAdminLeaderboard() {
             </td>
         </tr>
     `;
+
+    updateAdminFilterMatchCount();
 
     try {
         const { data, error } = await supabaseClient.rpc('get_block_leaderboard');
@@ -93,7 +120,7 @@ async function loadAdminLeaderboard() {
                 <td class="p-3.5 text-right font-mono font-bold text-emerald-700 bg-emerald-50/30">${appM.toLocaleString()}</td>
                 <td class="p-3.5 text-right font-mono font-semibold text-amber-700">${pendM.toLocaleString()}</td>
                 <td class="p-3.5 text-right font-mono font-semibold text-slate-700">${naM.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono font-semibold text-purple-700">${noRecM.toLocaleString()}</td>
+                <td class="p-3.5 text-right font-mono font-semibold text-purple-600">${noRecM.toLocaleString()}</td>
                 <td class="p-3.5 text-right font-mono font-semibold text-rose-700">${trM.toLocaleString()}</td>
                 <td class="p-3.5 text-right font-mono font-bold text-indigo-700">+${exM.toLocaleString()}</td>
                 <td class="p-3.5">
@@ -124,11 +151,329 @@ async function loadAdminLeaderboard() {
             filterLeaderboardRows(searchInput.value);
         }
 
+        await loadDailyProgressReport();
     } catch (err) {
         console.error("Leaderboard error:", err);
         tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-rose-600 font-semibold">Error: ${err.message}</td></tr>`;
         showToast(`Leaderboard Error: ${err.message}`, 'error');
     }
+}
+
+async function loadDailyProgressReport() {
+    if (!isMasterAdmin()) return;
+
+    const dateInput = document.getElementById('dailyProgressDate');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = getIstDateString(0);
+    }
+    const selectedDate = (dateInput && dateInput.value) ? dateInput.value : getIstDateString(0);
+    currentDailyReportDate = selectedDate;
+
+    const tbody = document.getElementById('dailyProgressTableBody');
+    const subtitle = document.getElementById('dailyReportSubtitle');
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-slate-400">Scanning block-wise card approvals for <b>${selectedDate}</b> (IST)...</td></tr>`;
+    }
+    if (subtitle) {
+        subtitle.innerText = `Showing card approvals & field updates recorded between 00:00 and 23:59 IST on ${selectedDate}.`;
+    }
+
+    try {
+        const startIso = new Date(`${selectedDate}T00:00:00.000+05:30`).toISOString();
+        const endIso = new Date(`${selectedDate}T23:59:59.999+05:30`).toISOString();
+
+        // Fetch all records updated on selectedDate in 1,000-row pages
+        const dailyRows = [];
+        const chunkSize = 1000;
+        let offset = 0;
+
+        while (true) {
+            const { data, error } = await supabaseClient
+                .from('bocw_members')
+                .select('block_name, family_id, member_id, STATUS, updated_at')
+                .gte('updated_at', startIso)
+                .lte('updated_at', endIso)
+                .order('member_id', { ascending: true })
+                .range(offset, offset + chunkSize - 1);
+
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+
+            dailyRows.push(...data);
+            if (data.length < chunkSize) break;
+            offset += chunkSize;
+        }
+
+        // Initialize map for all 22 blocks
+        const blockStatsMap = new Map();
+        ALL_BLOCKS_META.forEach(b => {
+            const lbRow = cachedLeaderboard.find(r => r.block_name === b.name);
+            blockStatsMap.set(b.name, {
+                block_name: b.name,
+                daily_approved_total: 0,
+                daily_approved_base: 0,
+                daily_approved_extra: 0,
+                daily_pending: 0,
+                daily_excluded: 0,
+                daily_total_processed: 0,
+                families_set: new Set(),
+                cumulative_approved: lbRow ? Number(lbRow.approved_members || 0) : 0,
+                base_total: lbRow ? Number(lbRow.total_members || 0) : 0
+            });
+        });
+
+        const districtFamiliesSet = new Set();
+
+        dailyRows.forEach(r => {
+            const blk = String(r.block_name ?? '').trim();
+            if (!blk) return;
+
+            const statusVal = cleanStatus(r.STATUS);
+            if (statusVal === 'Not Applied') return;
+
+            if (!blockStatsMap.has(blk)) {
+                blockStatsMap.set(blk, {
+                    block_name: blk,
+                    daily_approved_total: 0,
+                    daily_approved_base: 0,
+                    daily_approved_extra: 0,
+                    daily_pending: 0,
+                    daily_excluded: 0,
+                    daily_total_processed: 0,
+                    families_set: new Set(),
+                    cumulative_approved: 0,
+                    base_total: 0
+                });
+            }
+
+            const entry = blockStatsMap.get(blk);
+            const isExtra = String(r.member_id ?? '').startsWith('EXTRA_');
+            const famId = String(r.family_id ?? '');
+
+            entry.daily_total_processed += 1;
+            if (famId) {
+                entry.families_set.add(famId);
+                districtFamiliesSet.add(famId);
+            }
+
+            if (statusVal === 'Approved') {
+                entry.daily_approved_total += 1;
+                if (isExtra) {
+                    entry.daily_approved_extra += 1;
+                } else {
+                    entry.daily_approved_base += 1;
+                }
+            } else if (statusVal === 'Portal Pending') {
+                entry.daily_pending += 1;
+            } else if (statusVal === 'No Record Found' || statusVal === 'Not Traceable') {
+                entry.daily_excluded += 1;
+            }
+        });
+
+        const sortedBlocks = Array.from(blockStatsMap.values()).map(item => ({
+            ...item,
+            daily_families: item.families_set.size
+        })).sort((a, b) => {
+            if (b.daily_approved_total !== a.daily_approved_total) {
+                return b.daily_approved_total - a.daily_approved_total;
+            }
+            if (b.daily_total_processed !== a.daily_total_processed) {
+                return b.daily_total_processed - a.daily_total_processed;
+            }
+            return a.block_name.localeCompare(b.block_name);
+        });
+
+        cachedDailyProgress = sortedBlocks;
+
+        let totalDayApproved = 0;
+        let totalDayApprovedBase = 0;
+        let totalDayApprovedExtra = 0;
+        let totalDayPending = 0;
+        let totalDayProcessed = 0;
+        let activeBlocksCount = 0;
+        let zeroApprovedBlocksCount = 0;
+
+        sortedBlocks.forEach(b => {
+            totalDayApproved += b.daily_approved_total;
+            totalDayApprovedBase += b.daily_approved_base;
+            totalDayApprovedExtra += b.daily_approved_extra;
+            totalDayPending += b.daily_pending;
+            totalDayProcessed += b.daily_total_processed;
+            if (b.daily_total_processed > 0) activeBlocksCount += 1;
+            if (b.daily_approved_total === 0) zeroApprovedBlocksCount += 1;
+        });
+
+        document.getElementById('dailyStatApproved').innerText = totalDayApproved.toLocaleString();
+        document.getElementById('dailyStatApprovedSub').innerText = `${totalDayApprovedBase.toLocaleString()} Base + ${totalDayApprovedExtra.toLocaleString()} Extra`;
+        document.getElementById('dailyStatPending').innerText = totalDayPending.toLocaleString();
+        document.getElementById('dailyStatProcessed').innerText = totalDayProcessed.toLocaleString();
+        document.getElementById('dailyStatFamilies').innerText = `${districtFamiliesSet.size.toLocaleString()} Unique Families Touched`;
+        document.getElementById('dailyStatActiveBlocks').innerText = `${activeBlocksCount} / ${sortedBlocks.length} Active`;
+        document.getElementById('dailyStatZeroBlocks').innerText = `${zeroApprovedBlocksCount} Blocks with 0 Approvals`;
+
+        tbody.innerHTML = '';
+
+        sortedBlocks.forEach((row, idx) => {
+            const tr = document.createElement('tr');
+            const isZero = row.daily_approved_total === 0 && row.daily_total_processed === 0;
+            tr.className = isZero
+                ? "bg-rose-50/30 hover:bg-rose-50/70 cursor-pointer transition"
+                : "hover:bg-indigo-50/50 cursor-pointer transition";
+
+            tr.onclick = () => {
+                if (!isMasterAdmin()) return;
+                document.getElementById('blockSelector').value = row.block_name;
+                document.getElementById('statusFilter').value = 'Approved';
+                switchRole('deo');
+                onBlockChange();
+            };
+
+            let statusBadge = '';
+            if (row.daily_approved_total >= 25) {
+                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">🔥 High Progress</span>`;
+            } else if (row.daily_approved_total > 0) {
+                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">✅ Active</span>`;
+            } else if (row.daily_total_processed > 0) {
+                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">⏳ Pending Only</span>`;
+            } else {
+                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300">⚠️ 0 Activity</span>`;
+            }
+
+            const cumPct = row.base_total > 0 ? ((row.cumulative_approved / row.base_total) * 100).toFixed(1) : '0.0';
+
+            tr.innerHTML = `
+                <td class="p-3.5 font-bold text-slate-900">${idx + 1}. ${row.block_name}</td>
+                <td class="p-3.5 text-right font-mono font-black text-base ${row.daily_approved_total > 0 ? 'text-emerald-700' : 'text-rose-500'}">
+                    ${row.daily_approved_total > 0 ? `+${row.daily_approved_total.toLocaleString()}` : '0'}
+                </td>
+                <td class="p-3.5 text-right font-mono text-xs text-slate-600">
+                    <span class="font-bold text-slate-800">${row.daily_approved_base.toLocaleString()}</span> Base / <span class="font-bold text-indigo-700">+${row.daily_approved_extra.toLocaleString()}</span> Ex
+                </td>
+                <td class="p-3.5 text-right font-mono font-semibold text-amber-600">${row.daily_pending.toLocaleString()}</td>
+                <td class="p-3.5 text-right font-mono font-semibold text-rose-600">${row.daily_excluded.toLocaleString()}</td>
+                <td class="p-3.5 text-right font-mono font-bold text-slate-800">${row.daily_total_processed.toLocaleString()}</td>
+                <td class="p-3.5 text-right font-mono text-slate-600">${row.daily_families.toLocaleString()}</td>
+                <td class="p-3.5 text-right font-mono text-xs text-slate-700">
+                    <span class="font-bold text-emerald-800">${row.cumulative_approved.toLocaleString()}</span> / ${row.base_total.toLocaleString()} (${cumPct}%)
+                </td>
+                <td class="p-3.5 text-center">${statusBadge}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (err) {
+        console.error("Daily progress report error:", err);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-rose-600 font-semibold">Error loading daily progress: ${err.message}</td></tr>`;
+        }
+    }
+}
+
+async function onAdminBlockFilterChange() {
+    if (!isMasterAdmin()) return;
+
+    const block = document.getElementById('adminBlockSelector').value;
+    const gpSelect = document.getElementById('adminGpSelector');
+
+    if (block === 'ALL') {
+        gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats (District-Wide)</option>`;
+        await updateAdminFilterMatchCount();
+        return;
+    }
+
+    gpSelect.innerHTML = `<option value="ALL">Loading GPs for ${block}...</option>`;
+    try {
+        const { data, error } = await supabaseClient.rpc('get_block_gps', { p_block: block });
+        if (error) throw error;
+
+        gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats in ${block} (${data ? data.length : 0} GPs)</option>`;
+        if (data && data.length > 0) {
+            data.forEach(gp => {
+                const gpName = String(gp.gram_panchayat_name ?? '');
+                const opt = document.createElement('option');
+                opt.value = gpName;
+                opt.innerText = `${gpName} (${gp.approved_members}/${gp.total_members} Approved)`;
+                gpSelect.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats</option>`;
+    }
+
+    await updateAdminFilterMatchCount();
+}
+
+async function updateAdminFilterMatchCount() {
+    if (!isMasterAdmin()) return;
+
+    const blockEl = document.getElementById('adminBlockSelector');
+    const gpEl = document.getElementById('adminGpSelector');
+    const statusEl = document.getElementById('adminStatusFilter');
+    const searchEl = document.getElementById('adminSearchInput');
+    const badgeEl = document.getElementById('adminFilterCountBadge');
+
+    if (!blockEl || !badgeEl) return;
+
+    const block = blockEl.value || 'ALL';
+    const gp = gpEl ? gpEl.value : 'ALL';
+    const statusFilter = statusEl ? statusEl.value : 'ALL';
+    const searchQuery = searchEl ? searchEl.value.trim() : '';
+
+    badgeEl.innerText = 'Counting matching records...';
+
+    try {
+        let query = supabaseClient
+            .from('bocw_members')
+            .select('*', { count: 'exact', head: true });
+
+        if (block !== 'ALL') {
+            query = query.eq('block_name', block);
+        }
+        if (gp !== 'ALL' && block !== 'ALL') {
+            query = query.eq('gram_panchayat_name', gp);
+        }
+        if (statusFilter !== 'ALL') {
+            if (statusFilter === 'EXTRA_ONLY') {
+                query = query.ilike('member_id', 'EXTRA_%');
+            } else if (statusFilter === 'Not Applied') {
+                query = query.or('STATUS.is.null,STATUS.eq.Not Applied,STATUS.eq.Unidentified,STATUS.eq.NULL,STATUS.eq.');
+            } else {
+                query = query.eq('STATUS', statusFilter);
+            }
+        }
+        if (searchQuery.length > 0) {
+            const q = searchQuery.replace(/,/g, '');
+            query = query.or(`member_name.ilike.%${q}%,family_id.ilike.%${q}%,member_id.ilike.%${q}%,mobile_no.ilike.%${q}%,father_name.ilike.%${q}%`);
+        }
+
+        const { count, error } = await query;
+        if (error) throw error;
+
+        const scopeLabel = block === 'ALL' ? 'Across All 22 Blocks' : `in ${block}`;
+        badgeEl.innerText = `Matching Records: ${(count || 0).toLocaleString()} Members (${scopeLabel})`;
+    } catch (err) {
+        badgeEl.innerText = 'Count unavailable';
+    }
+}
+
+async function openFilteredInTerminal() {
+    if (!isMasterAdmin()) return;
+
+    const adminBlock = document.getElementById('adminBlockSelector').value;
+    const adminGp = document.getElementById('adminGpSelector').value;
+    const adminStatus = document.getElementById('adminStatusFilter').value;
+    const adminSearch = document.getElementById('adminSearchInput').value.trim();
+
+    document.getElementById('blockSelector').value = adminBlock;
+    document.getElementById('statusFilter').value = adminStatus;
+    document.getElementById('searchInput').value = adminSearch;
+
+    switchRole('deo');
+    currentPage = 1;
+    await loadGPDropdown();
+    if (adminBlock !== 'ALL' && adminGp !== 'ALL') {
+        document.getElementById('gpSelector').value = adminGp;
+    }
+    await loadBlockData();
 }
 
 async function checkSpeedAnomalies() {
