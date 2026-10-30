@@ -227,6 +227,164 @@ async function exportCampCallListExcel() {
     }
 }
 
+async function exportGPProcessedSummaryExcel() {
+    if (isExportInProgress) return;
+
+    const block = getAuthorizedBlock();
+    if (!block) return;
+
+    const statusText = document.getElementById('syncStatusText');
+    const btnEl = document.getElementById('gpSummaryExportBtn');
+    const originalBtnHtml = btnEl ? btnEl.innerHTML : '<span>📊</span><span>Download GP Report (.xlsx)</span>';
+
+    try {
+        isExportInProgress = true;
+        if (btnEl) btnEl.disabled = true;
+        statusText.innerText = "Preparing GP Report (.xlsx)...";
+        showToast("Generating GP Processed vs Not Processed Excel report...", "info", 2000);
+
+        let countQuery = supabaseClient
+            .from('bocw_members')
+            .select('*', { count: 'exact', head: true })
+            .not('member_id', 'ilike', 'EXTRA_%');
+
+        if (block !== 'ALL') {
+            countQuery = countQuery.eq('block_name', block);
+        }
+
+        const { count, error: countError } = await countQuery;
+        if (countError) throw countError;
+
+        const totalCount = count || 0;
+        if (totalCount === 0) {
+            showToast("No records found for GP report.", "warning");
+            statusText.innerText = "✓ Synced with Cloud DB";
+            return;
+        }
+
+        const chunkSize = 1000;
+        const totalChunks = Math.ceil(totalCount / chunkSize);
+        const concurrency = 3;
+        const allRows = [];
+
+        for (let waveStart = 0; waveStart < totalChunks; waveStart += concurrency) {
+            const wavePromises = [];
+            for (let i = 0; i < concurrency && (waveStart + i) < totalChunks; i++) {
+                const chunkIdx = waveStart + i;
+                const fromIdx = chunkIdx * chunkSize;
+                const toIdx = fromIdx + chunkSize - 1;
+
+                let dataQuery = supabaseClient
+                    .from('bocw_members')
+                    .select('gram_panchayat_name, member_id, STATUS')
+                    .not('member_id', 'ilike', 'EXTRA_%');
+
+                if (block !== 'ALL') {
+                    dataQuery = dataQuery.eq('block_name', block);
+                }
+
+                wavePromises.push(
+                    dataQuery
+                        .order('member_id', { ascending: true })
+                        .range(fromIdx, toIdx)
+                );
+            }
+
+            const results = await Promise.all(wavePromises);
+            for (const res of results) {
+                if (res.error) throw res.error;
+                if (res.data && res.data.length > 0) {
+                    allRows.push(...res.data);
+                }
+            }
+
+            const fetched = Math.min(allRows.length, totalCount);
+            const pct = totalCount > 0 ? Math.round((fetched / totalCount) * 100) : 100;
+            statusText.innerText = `Scanning GPs ${fetched.toLocaleString()} / ${totalCount.toLocaleString()} (${pct}%)...`;
+            if (btnEl) {
+                btnEl.innerText = `⏳ ${pct}%`;
+            }
+        }
+
+        const gpMap = new Map();
+        allRows.forEach(r => {
+            if (String(r.member_id ?? '').startsWith('EXTRA_')) return;
+            const gpName = String(r.gram_panchayat_name ?? 'UNKNOWN').trim() || 'UNKNOWN';
+            if (!gpMap.has(gpName)) {
+                gpMap.set(gpName, {
+                    gp_name: gpName,
+                    processed: 0,
+                    not_processed: 0
+                });
+            }
+            const entry = gpMap.get(gpName);
+            const statusVal = cleanStatus(r.STATUS);
+            if (statusVal === 'Not Applied') {
+                entry.not_processed += 1;
+            } else {
+                entry.processed += 1;
+            }
+        });
+
+        const sortedGPs = Array.from(gpMap.values()).sort((a, b) =>
+            a.gp_name.localeCompare(b.gp_name)
+        );
+
+        const headers = [
+            "Name of GP",
+            "No. of Member Processed",
+            "No. of Member Not Processed"
+        ];
+
+        const aoa = [headers];
+        let totalProcessed = 0;
+        let totalNotProcessed = 0;
+
+        sortedGPs.forEach(gp => {
+            totalProcessed += gp.processed;
+            totalNotProcessed += gp.not_processed;
+            aoa.push([
+                gp.gp_name,
+                { t: 'n', v: gp.processed, z: '0' },
+                { t: 'n', v: gp.not_processed, z: '0' }
+            ]);
+        });
+
+        aoa.push([
+            "TOTAL",
+            { t: 'n', v: totalProcessed, z: '0' },
+            { t: 'n', v: totalNotProcessed, z: '0' }
+        ]);
+
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [
+            { wch: 28 }, // Name of GP
+            { wch: 26 }, // No. of Member Processed
+            { wch: 28 }  // No. of Member Not Processed
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "GP_Processed_Report");
+
+        const blockLabel = block === 'ALL' ? 'ALL_22_BLOCKS' : block.replace(/\s+/g, '_');
+        const filename = `BoCW_${blockLabel}_GP_Processed_Report.xlsx`;
+        XLSX.writeFile(wb, filename);
+
+        statusText.innerText = `✓ Exported ${sortedGPs.length} GPs`;
+        showToast(`Downloaded ${filename} (${sortedGPs.length} GPs)!`, "success", 3000);
+    } catch (err) {
+        console.error("GP summary export error:", err);
+        showToast(`GP Report failed: ${err.message}`, "error");
+        statusText.innerText = "Export Error";
+    } finally {
+        isExportInProgress = false;
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = originalBtnHtml;
+        }
+    }
+}
+
 async function exportAdminFilteredExcel() {
     if (!isMasterAdmin()) {
         showToast("Access Denied: Only ACMO Master can export district-wide data.", "error");
