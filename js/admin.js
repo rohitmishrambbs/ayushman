@@ -19,7 +19,10 @@ function switchAdminWorkspaceTab(tab) {
     if (lbPanel) lbPanel.classList.add('hidden');
     if (dailyPanel) dailyPanel.classList.add('hidden');
     if (filterDrawer) filterDrawer.classList.add('hidden');
-    if (topCtrlLb) topCtrlLb.classList.add('hidden');
+    if (topCtrlLb) {
+        topCtrlLb.classList.add('hidden');
+        topCtrlLb.classList.remove('flex');
+    }
     if (topCtrlDaily) {
         topCtrlDaily.classList.add('hidden');
         topCtrlDaily.classList.remove('flex');
@@ -36,7 +39,10 @@ function switchAdminWorkspaceTab(tab) {
         updateAdminFilterMatchCount();
     } else {
         if (lbPanel) lbPanel.classList.remove('hidden');
-        if (topCtrlLb) topCtrlLb.classList.remove('hidden');
+        if (topCtrlLb) {
+            topCtrlLb.classList.remove('hidden');
+            topCtrlLb.classList.add('flex');
+        }
     }
 }
 
@@ -45,18 +51,6 @@ function toggleAdminFilterDrawer(forceState) {
     if (!drawer) return;
     const willOpen = typeof forceState === 'boolean' ? forceState : drawer.classList.contains('hidden');
     switchAdminWorkspaceTab(willOpen ? 'filter' : 'leaderboard');
-}
-
-function handleAdminQuickAction(action) {
-    const selectEl = document.getElementById('adminQuickActionSelect');
-    if (selectEl) selectEl.value = '';
-    if (!action) return;
-
-    if (action === 'export_leaderboard') {
-        exportLeaderboardExcel();
-    } else if (action === 'export_daily') {
-        exportDailyProgressExcel();
-    }
 }
 
 function dismissAntiCheatBanner() {
