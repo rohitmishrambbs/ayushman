@@ -416,12 +416,6 @@ async function saveMemberStatus(memberId, status, remark) {
         if (rec) {
             rec.STATUS = status;
             rec.remark = remark;
-            trackDeoVelocityAndAlert({
-                blockName: rec.block_name || authBlock,
-                familyId: rec.family_id,
-                gpName: rec.gram_panchayat_name || '',
-                status: status
-            });
         }
 
         statusText.innerText = `✓ Saved Status`;
@@ -475,20 +469,11 @@ async function saveFamilyStatus(familyId, status, remark) {
             if (fallback.error) throw fallback.error;
         }
 
-        let sampleRec = null;
         currentLoadedRecords.forEach(r => {
             if (String(r.family_id) === String(familyId)) {
                 r.STATUS = status;
                 r.remark = remark;
-                if (!sampleRec) sampleRec = r;
             }
-        });
-
-        trackDeoVelocityAndAlert({
-            blockName: (sampleRec && sampleRec.block_name) ? sampleRec.block_name : authBlock,
-            familyId: familyId,
-            gpName: (sampleRec && sampleRec.gram_panchayat_name) ? sampleRec.gram_panchayat_name : '',
-            status: status
         });
 
         statusText.innerText = `✓ Saved Family ${familyId}`;
@@ -499,150 +484,5 @@ async function saveFamilyStatus(familyId, status, remark) {
     } catch (err) {
         showToast(`Failed to update Family: ${err.message}`, "error");
         statusText.innerText = "Save Failed";
-    }
-}
-
-/**
- * ============================================================================
- * Real-Time Block DEO Speed Anomaly Detector & Email Dispatcher (>3 Fam/Min)
- * ============================================================================
- */
-const ANOMALY_REPORT_EMAIL = 'rm.pmhs@gmail.com';
-const ANOMALY_FAMILY_LIMIT_PER_MIN = 3; // Triggers when a Block DEO exceeds 3 families/min (4+ families in 60s)
-const DEO_VELOCITY_LOG_KEY = 'bocw_deo_velocity_log_v1';
-const DEO_ANOMALY_COOLDOWN_KEY = 'bocw_deo_anomaly_cooldown_v1';
-let deoAnomalyEmailTimer = null;
-
-function formatIstTimestamp(ms = Date.now()) {
-    return new Date(ms).toLocaleString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true
-    }) + ' IST';
-}
-
-function trackDeoVelocityAndAlert({ blockName, familyId, gpName, status }) {
-    // Only monitor Block DEO sessions (not ACMO Master) and non-reset status updates
-    if (isMasterAdmin()) return;
-    if (!blockName || !familyId || cleanStatus(status) === 'Not Applied') return;
-
-    const now = Date.now();
-    const windowStart = now - 60 * 1000; // Rolling 60-second window
-
-    let log = [];
-    try {
-        const raw = localStorage.getItem(DEO_VELOCITY_LOG_KEY);
-        if (raw) log = JSON.parse(raw);
-    } catch (_) {
-        log = [];
-    }
-
-    // Keep only events from the last 60 seconds for this block
-    log = (Array.isArray(log) ? log : []).filter(item => item && item.ts >= windowStart && item.block === blockName);
-
-    log.push({
-        block: String(blockName),
-        familyId: String(familyId),
-        gp: String(gpName || ''),
-        status: String(status),
-        ts: now,
-        timeLabel: formatIstTimestamp(now)
-    });
-
-    try {
-        localStorage.setItem(DEO_VELOCITY_LOG_KEY, JSON.stringify(log));
-    } catch (_) {}
-
-    // Group by unique family_id in the last 60 seconds
-    const uniqueFamiliesMap = new Map();
-    log.forEach(item => {
-        uniqueFamiliesMap.set(item.familyId, item);
-    });
-
-    if (uniqueFamiliesMap.size > ANOMALY_FAMILY_LIMIT_PER_MIN) {
-        // Debounce by 2.5 seconds to capture the full burst if DEO is still clicking rapidly
-        if (deoAnomalyEmailTimer) clearTimeout(deoAnomalyEmailTimer);
-        deoAnomalyEmailTimer = setTimeout(() => {
-            dispatchRealTimeAnomalyEmail(blockName);
-        }, 2500);
-    }
-}
-
-async function dispatchRealTimeAnomalyEmail(blockName) {
-    const now = Date.now();
-    const windowStart = now - 65 * 1000;
-
-    // Check 3-minute per-block cooldown to prevent inbox flooding during a single burst
-    let cooldownMap = {};
-    try {
-        const rawCd = localStorage.getItem(DEO_ANOMALY_COOLDOWN_KEY);
-        if (rawCd) cooldownMap = JSON.parse(rawCd) || {};
-    } catch (_) {
-        cooldownMap = {};
-    }
-
-    if (cooldownMap[blockName] && (now - cooldownMap[blockName]) < 3 * 60 * 1000) {
-        return;
-    }
-
-    let log = [];
-    try {
-        const raw = localStorage.getItem(DEO_VELOCITY_LOG_KEY);
-        if (raw) log = JSON.parse(raw);
-    } catch (_) {
-        log = [];
-    }
-
-    const recentBlockEvents = (Array.isArray(log) ? log : []).filter(
-        item => item && item.ts >= windowStart && item.block === blockName
-    );
-
-    const uniqueFamiliesMap = new Map();
-    recentBlockEvents.forEach(item => {
-        uniqueFamiliesMap.set(item.familyId, item);
-    });
-
-    const famCount = uniqueFamiliesMap.size;
-    if (famCount <= ANOMALY_FAMILY_LIMIT_PER_MIN) return;
-
-    // Lock cooldown immediately before network call
-    cooldownMap[blockName] = now;
-    try {
-        localStorage.setItem(DEO_ANOMALY_COOLDOWN_KEY, JSON.stringify(cooldownMap));
-    } catch (_) {}
-
-    const familyListSummary = Array.from(uniqueFamiliesMap.values())
-        .map((f, idx) => `${idx + 1}. Family ID: ${f.familyId} (${f.gp || 'GP N/A'}) -> ${f.status} [${f.timeLabel}]`)
-        .join(' | ');
-
-    const deoUsername = (currentSession && currentSession.username) ? currentSession.username : `DEO_${blockName}`;
-    const detectedTimeIst = formatIstTimestamp(now);
-
-    try {
-        await fetch(`https://formsubmit.co/ajax/${ANOMALY_REPORT_EMAIL}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                _subject: `🚨 [BoCW Azamgarh] Speed Anomaly Alert: ${blockName} (${famCount} Families/Min)`,
-                _template: 'table',
-                _captcha: 'false',
-                Alert_Type: 'Real-Time Block DEO Speed Anomaly (>3 Families/Min)',
-                Block_Name: blockName,
-                DEO_Login_ID: deoUsername,
-                Detected_At_IST: detectedTimeIst,
-                Velocity_Rate: `${famCount} Unique Families updated within 60 seconds (Threshold: >3 Families/Min)`,
-                Updated_Families_Breakdown: familyListSummary
-            })
-        });
-    } catch (err) {
-        console.error('Real-time anomaly email dispatch error:', err);
     }
 }

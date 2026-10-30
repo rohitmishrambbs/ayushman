@@ -547,7 +547,7 @@ async function checkSpeedAnomalies() {
     banner.innerHTML = `
         <div class="flex items-center gap-2.5">
             <div class="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-            <span>Scanning recent update timestamps across blocks for velocity anomalies (&gt;3 families/minute)...</span>
+            <span>Scanning recent update timestamps across blocks for velocity anomalies (>6 families/minute)...</span>
         </div>
     `;
 
@@ -573,7 +573,7 @@ async function checkSpeedAnomalies() {
         });
 
         const anomalies = Object.entries(minuteBuckets)
-            .filter(([_, famSet]) => famSet.size > 3)
+            .filter(([_, famSet]) => famSet.size > 6)
             .map(([key, famSet]) => {
                 const [blk, timeStr] = key.split('__');
                 return `${blk} (${famSet.size} families in 1 min at ${timeStr.replace('T', ' ')})`;
@@ -582,7 +582,7 @@ async function checkSpeedAnomalies() {
         if (anomalies.length === 0) {
             banner.className = "mb-4 p-4 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-800 text-xs font-bold animate-fade-in flex items-center justify-between gap-3";
             banner.innerHTML = `
-                <div><span class="text-sm mr-1">✓</span> Velocity Audit Passed: No bulk-clicking anomalies (&gt;3 families/min) detected in the last 24 hours.</div>
+                <div><span class="text-sm mr-1">✓</span> Velocity Audit Passed: No bulk-clicking anomalies (&gt;6 families/min) detected in the last 24 hours.</div>
                 <button onclick="dismissAntiCheatBanner()" class="text-emerald-700 hover:text-emerald-950 font-black px-2 py-0.5 rounded cursor-pointer">✕</button>
             `;
             showToast("Velocity Audit: No anomalies detected", "success", 2500);
@@ -590,7 +590,7 @@ async function checkSpeedAnomalies() {
             banner.className = "mb-4 p-4 rounded-xl border bg-rose-50 border-rose-300 text-rose-800 text-xs font-bold space-y-1 animate-fade-in";
             banner.innerHTML = `
                 <div class="flex items-center justify-between gap-3">
-                    <p class="flex items-center gap-1.5"><span class="text-sm">⚠️</span> Speed Anomaly Detected (&gt;3 families updated in a single minute):</p>
+                    <p class="flex items-center gap-1.5"><span class="text-sm">⚠️</span> Speed Anomaly Detected (&gt;6 families updated in a single minute):</p>
                     <button onclick="dismissAntiCheatBanner()" class="text-rose-700 hover:text-rose-950 font-black px-2 py-0.5 rounded cursor-pointer">✕</button>
                 </div>
                 <p class="font-mono text-[11px] bg-rose-100/60 p-2 rounded-lg mt-1">${anomalies.join(' | ')}</p>
