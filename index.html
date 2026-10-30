@@ -444,9 +444,10 @@
             </div>
 
             <!-- VIEW B: ACMO DISTRICT COMMAND VIEW -->
-            <div id="adminView" class="space-y-6 hidden">
+            <div id="adminView" class="space-y-4 hidden">
+                <!-- 1. Top District Command Header & 6 KPI Ribbon -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-5">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-4 mb-5">
+                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-100 pb-4 mb-4">
                         <div>
                             <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-[11px] font-bold px-2.5 py-0.5 rounded-md mb-1 uppercase tracking-wider border border-purple-100">
                                 <span class="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
@@ -455,83 +456,88 @@
                             <h2 class="text-xl font-bold text-slate-900 tracking-tight">ACMO 22-Block Real-Time Command Dashboard</h2>
                             <p class="text-xs text-slate-500 mt-0.5">Official 70,673 base dataset protected with segregated auditing for extra PM-JAY members.</p>
                         </div>
-                        <div class="flex flex-wrap gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button id="toggleAdminFilterDrawerBtn" onclick="toggleAdminFilterDrawer()" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/90 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer">
+                                <span>🗂️</span>
+                                <span id="toggleAdminFilterDrawerLabel">Custom Filter &amp; Export</span>
+                                <span id="toggleAdminFilterDrawerChevron" class="text-[10px] transition-transform duration-200">▼</span>
+                            </button>
                             <button id="velocityCheckBtn" onclick="checkSpeedAnomalies()" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer">
                                 <span>⚡</span>
                                 <span>Run Velocity Check</span>
                             </button>
-                            <button onclick="loadAdminLeaderboard()" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300/80 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer">
+                            <button onclick="loadAdminLeaderboard()" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-xs active:scale-95 cursor-pointer">
                                 <span>🔄</span>
                                 <span>Refresh Live Stats</span>
-                            </button>
-                            <button onclick="exportLeaderboardExcel()" class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm hover:shadow-emerald-600/30 active:scale-95 cursor-pointer">
-                                <span>📥</span>
-                                <span>Download Leaderboard (.xlsx)</span>
                             </button>
                         </div>
                     </div>
 
+                    <!-- Collapsible Velocity / Anti-Cheat Alert Banner (only visible when Run Velocity Check is clicked) -->
                     <div id="antiCheatBanner" class="hidden mb-4 p-4 rounded-xl border text-xs font-semibold animate-fade-in"></div>
 
                     <!-- District KPI Cards (6 Cards) -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
-                        <div class="bg-gradient-to-br from-slate-50 to-slate-100/60 border border-slate-200/90 p-4 rounded-2xl shadow-2xs">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <div class="bg-gradient-to-br from-slate-50 to-slate-100/60 border border-slate-200/90 p-3.5 rounded-2xl shadow-2xs">
                             <div class="flex items-center justify-between">
                                 <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Base Target</p>
                                 <span class="text-slate-400">🎯</span>
                             </div>
-                            <p class="text-2xl font-black text-slate-900 mt-2 font-mono tracking-tight" id="statTotalMembers">70,673</p>
-                            <p class="text-[11px] text-slate-500 mt-1" id="statTotalFamilies">17,922 Families &bull; 22 Blocks</p>
+                            <p class="text-2xl font-black text-slate-900 mt-1.5 font-mono tracking-tight" id="statTotalMembers">70,673</p>
+                            <p class="text-[11px] text-slate-500 mt-0.5" id="statTotalFamilies">17,922 Families &bull; 22 Blocks</p>
                         </div>
-                        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/40 border border-emerald-200 p-4 rounded-2xl shadow-2xs">
+                        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/40 border border-emerald-200 p-3.5 rounded-2xl shadow-2xs">
                             <div class="flex items-center justify-between">
                                 <p class="text-[11px] font-bold text-emerald-700 uppercase tracking-wide">Approved</p>
                                 <span class="text-emerald-500">✓</span>
                             </div>
-                            <p class="text-2xl font-black text-emerald-900 mt-2 font-mono tracking-tight" id="statApproved">--</p>
-                            <p class="text-[11px] text-emerald-700 mt-1 font-semibold" id="statApprovedPct">Calculating...</p>
+                            <p class="text-2xl font-black text-emerald-900 mt-1.5 font-mono tracking-tight" id="statApproved">--</p>
+                            <p class="text-[11px] text-emerald-700 mt-0.5 font-semibold" id="statApprovedPct">Calculating...</p>
                         </div>
-                        <div class="bg-gradient-to-br from-amber-50 to-amber-100/40 border border-amber-200 p-4 rounded-2xl shadow-2xs">
+                        <div class="bg-gradient-to-br from-amber-50 to-amber-100/40 border border-amber-200 p-3.5 rounded-2xl shadow-2xs">
                             <div class="flex items-center justify-between">
                                 <p class="text-[11px] font-bold text-amber-700 uppercase tracking-wide">Portal Pending</p>
                                 <span class="text-amber-500">⏳</span>
                             </div>
-                            <p class="text-2xl font-black text-amber-900 mt-2 font-mono tracking-tight" id="statPending">--</p>
-                            <p class="text-[11px] text-amber-700 mt-1 font-medium">Awaiting approval</p>
+                            <p class="text-2xl font-black text-amber-900 mt-1.5 font-mono tracking-tight" id="statPending">--</p>
+                            <p class="text-[11px] text-amber-700 mt-0.5 font-medium">Awaiting approval</p>
                         </div>
-                        <div class="bg-gradient-to-br from-slate-100 to-slate-200/50 border border-slate-300 p-4 rounded-2xl shadow-2xs">
+                        <div class="bg-gradient-to-br from-slate-100 to-slate-200/50 border border-slate-300 p-3.5 rounded-2xl shadow-2xs">
                             <div class="flex items-center justify-between">
                                 <p class="text-[11px] font-bold text-slate-700 uppercase tracking-wide">Not Applied</p>
                                 <span class="text-slate-500">⚪</span>
                             </div>
-                            <p class="text-2xl font-black text-slate-900 mt-2 font-mono tracking-tight" id="statNotApplied">--</p>
-                            <p class="text-[11px] text-slate-600 mt-1 font-medium">Actionable camp target</p>
+                            <p class="text-2xl font-black text-slate-900 mt-1.5 font-mono tracking-tight" id="statNotApplied">--</p>
+                            <p class="text-[11px] text-slate-600 mt-0.5 font-medium">Actionable camp target</p>
                         </div>
-                        <div class="bg-gradient-to-br from-rose-50 to-rose-100/40 border border-rose-200 p-4 rounded-2xl shadow-2xs">
+                        <div class="bg-gradient-to-br from-rose-50 to-rose-100/40 border border-rose-200 p-3.5 rounded-2xl shadow-2xs">
                             <div class="flex items-center justify-between">
-                                <p class="text-[11px] font-bold text-rose-700 uppercase tracking-wide">No Record + Not Traceable</p>
+                                <p class="text-[11px] font-bold text-rose-700 uppercase tracking-wide">No Rec / Excluded</p>
                                 <span class="text-rose-500">✕</span>
                             </div>
-                            <p class="text-2xl font-black text-rose-900 mt-2 font-mono tracking-tight" id="statOther">--</p>
-                            <p class="text-[11px] text-rose-700 mt-1 font-medium">Audited &amp; Excluded</p>
+                            <p class="text-2xl font-black text-rose-900 mt-1.5 font-mono tracking-tight" id="statOther">--</p>
+                            <p class="text-[11px] text-rose-700 mt-0.5 font-medium">Audited &amp; Excluded</p>
                         </div>
-                        <div class="bg-gradient-to-br from-indigo-50 to-indigo-100/40 border border-indigo-200 p-4 rounded-2xl shadow-2xs">
+                        <div class="bg-gradient-to-br from-indigo-50 to-indigo-100/40 border border-indigo-200 p-3.5 rounded-2xl shadow-2xs">
                             <div class="flex items-center justify-between">
                                 <p class="text-[11px] font-bold text-indigo-700 uppercase tracking-wide">+ Extra Added</p>
                                 <span class="text-indigo-500">✨</span>
                             </div>
-                            <p class="text-2xl font-black text-indigo-900 mt-2 font-mono tracking-tight" id="statExtraAdded">--</p>
-                            <p class="text-[11px] text-indigo-700 mt-1 font-medium">New PM-JAY members</p>
+                            <p class="text-2xl font-black text-indigo-900 mt-1.5 font-mono tracking-tight" id="statExtraAdded">--</p>
+                            <p class="text-[11px] text-indigo-700 mt-0.5 font-medium">New PM-JAY members</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- ACMO District-Wide Filter & Filtered Excel Export Panel -->
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-5 space-y-4">
+                <!-- 2. Collapsible Drawer: District-Wide Custom Data Filter & Excel Exporter -->
+                <div id="adminFilterDrawer" class="hidden bg-white rounded-2xl shadow-sm border border-indigo-200/90 p-5 space-y-4 animate-fade-in">
                     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 border-b border-slate-100 pb-3.5">
                         <div>
-                            <span class="inline-block bg-emerald-50 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-md mb-1 uppercase tracking-wider">District-Wide Custom Data Filter &amp; Exporter</span>
-                            <h3 class="text-base font-bold text-slate-900">Filter District / Block Records &amp; Download Custom Excel (.xlsx)</h3>
+                            <div class="flex items-center gap-2">
+                                <span class="inline-block bg-indigo-50 text-indigo-700 text-[11px] font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wider border border-indigo-100">District Data Explorer &amp; Exporter</span>
+                                <button onclick="toggleAdminFilterDrawer(false)" class="text-xs text-slate-400 hover:text-slate-600 font-semibold cursor-pointer" title="Collapse drawer">✕ Hide Drawer</button>
+                            </div>
+                            <h3 class="text-base font-bold text-slate-900 mt-1">Filter District / Block Records &amp; Download Custom Excel (.xlsx)</h3>
                             <p class="text-xs text-slate-500">Filter across all 22 Blocks (or any single Block/GP), Status, or Name/Family ID/Mobile and download the exact filtered dataset.</p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2.5 self-stretch lg:self-center">
@@ -598,118 +604,158 @@
                     </div>
                 </div>
 
-                <!-- 22-Block Daily Card Approval Progress Report -->
+                <!-- 3. Segmented Workspace Navigation Bar (2 Main Tabs) -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <span class="inline-block bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Daily Monitoring</span>
-                                <h3 class="font-bold text-slate-900 text-base">Block-Wise Daily Card Approval Progress Report</h3>
+                    <div class="px-4 pt-3 pb-0 bg-slate-100/80 border-b border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5">
+                            <button
+                                id="adminTabBtnLeaderboard"
+                                onclick="switchAdminWorkspaceTab('leaderboard')"
+                                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition border-t border-x border-slate-200 bg-white text-indigo-700 shadow-2xs -mb-px cursor-pointer"
+                            >
+                                <span>📊</span>
+                                <span>1. Overall Leaderboard (22 Blocks)</span>
+                            </button>
+                            <button
+                                id="adminTabBtnDaily"
+                                onclick="switchAdminWorkspaceTab('daily')"
+                                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition border-t border-x border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer"
+                            >
+                                <span>📅</span>
+                                <span>2. Daily Progress Report</span>
+                                <span id="dailyTabQuickBadge" class="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    Today: --
+                                </span>
+                            </button>
+                        </div>
+
+                        <div class="pb-2 sm:pb-2.5 flex items-center justify-end">
+                            <button onclick="toggleAdminFilterDrawer()" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer">
+                                <span>Need custom Block / GP / Status Excel export?</span>
+                                <span class="underline">Open Filter Drawer ↗</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TAB PANEL 1: 22-Block Live Performance Leaderboard -->
+                    <div id="adminTabPanelLeaderboard">
+                        <div class="px-6 py-4 border-b border-slate-200 bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">22-Block Cumulative Performance Leaderboard</h3>
+                                <span class="text-xs text-slate-500">Click any Block row to jump straight to its DEO Terminal</span>
                             </div>
-                            <p class="text-xs text-slate-500 mt-0.5" id="dailyReportSubtitle">Real-time count of cards approved and processed by each of the 22 Blocks on the selected date (IST).</p>
+                            <div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                                <div class="w-full sm:w-60">
+                                    <input
+                                        type="text"
+                                        id="leaderboardSearchInput"
+                                        oninput="filterLeaderboardRows(this.value)"
+                                        placeholder="🔍 Filter blocks (e.g. Mirzapur)..."
+                                        class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white font-semibold"
+                                    >
+                                </div>
+                                <button onclick="exportLeaderboardExcel()" class="inline-flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs active:scale-95 cursor-pointer">
+                                    <span>📥</span>
+                                    <span>Download Leaderboard (.xlsx)</span>
+                                </button>
+                            </div>
                         </div>
-
-                        <div class="flex flex-wrap items-center gap-2">
-                            <button onclick="setDailyReportDateOffset(0)" class="px-2.5 py-1.5 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-300 rounded-lg text-xs font-bold transition cursor-pointer">Today</button>
-                            <button onclick="setDailyReportDateOffset(-1)" class="px-2.5 py-1.5 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-300 rounded-lg text-xs font-bold transition cursor-pointer">Yesterday</button>
-                            <input
-                                type="date"
-                                id="dailyProgressDate"
-                                onchange="loadDailyProgressReport()"
-                                class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            >
-                            <button onclick="loadDailyProgressReport()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition cursor-pointer">
-                                🔄 Refresh
-                            </button>
-                            <button onclick="exportDailyProgressExcel()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer">
-                                📥 Download Daily Report (.xlsx)
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Daily KPI Summary Row -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-slate-50/60 border-b border-slate-200">
-                        <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl">
-                            <p class="text-[11px] font-bold text-emerald-700 uppercase">Cards Approved on Date</p>
-                            <p class="text-2xl font-black text-emerald-900 mt-0.5 font-mono" id="dailyStatApproved">--</p>
-                            <p class="text-xs text-emerald-700 mt-0.5 font-medium" id="dailyStatApprovedSub">Base + Extra Approved</p>
-                        </div>
-                        <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-xl">
-                            <p class="text-[11px] font-bold text-amber-700 uppercase">Portal Pending on Date</p>
-                            <p class="text-2xl font-black text-amber-900 mt-0.5 font-mono" id="dailyStatPending">--</p>
-                            <p class="text-xs text-amber-700 mt-0.5">Submitted &amp; awaiting approval</p>
-                        </div>
-                        <div class="bg-indigo-50 border border-indigo-200 p-3.5 rounded-xl">
-                            <p class="text-[11px] font-bold text-indigo-700 uppercase">Total Processed on Date</p>
-                            <p class="text-2xl font-black text-indigo-900 mt-0.5 font-mono" id="dailyStatProcessed">--</p>
-                            <p class="text-xs text-indigo-700 mt-0.5" id="dailyStatFamilies">-- Families Touched</p>
-                        </div>
-                        <div class="bg-rose-50 border border-rose-200 p-3.5 rounded-xl">
-                            <p class="text-[11px] font-bold text-rose-700 uppercase">Block Participation</p>
-                            <p class="text-2xl font-black text-rose-900 mt-0.5 font-mono" id="dailyStatActiveBlocks">-- / 22</p>
-                            <p class="text-xs text-rose-700 mt-0.5" id="dailyStatZeroBlocks">-- Blocks with 0 Approvals</p>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-200 bg-slate-50 text-slate-600 text-xs uppercase font-bold sticky top-0 z-10">
+                                        <th class="p-3.5">Rank &amp; Block</th>
+                                        <th class="p-3.5 text-right">Families</th>
+                                        <th class="p-3.5 text-right">Base Members</th>
+                                        <th class="p-3.5 text-right text-emerald-700">Approved</th>
+                                        <th class="p-3.5 text-right text-amber-700">Portal Pending</th>
+                                        <th class="p-3.5 text-right text-slate-700">Not Applied</th>
+                                        <th class="p-3.5 text-right text-purple-700">No Record</th>
+                                        <th class="p-3.5 text-right text-rose-700">Not Traceable</th>
+                                        <th class="p-3.5 text-right text-indigo-700">+ Extra Added</th>
+                                        <th class="p-3.5 w-40">Completion Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leaderboardTableBody" class="divide-y divide-slate-100 text-sm">
+                                    <tr><td colspan="10" class="p-8 text-center text-slate-400">Loading 22-block statistics from Supabase...</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b border-slate-200 bg-slate-100 text-slate-600 text-xs uppercase font-bold">
-                                    <th class="p-3.5">Rank &amp; Block</th>
-                                    <th class="p-3.5 text-right text-emerald-700">Approved (Date)</th>
-                                    <th class="p-3.5 text-right text-indigo-700">Base / +Extra</th>
-                                    <th class="p-3.5 text-right text-amber-700">Portal Pending (Date)</th>
-                                    <th class="p-3.5 text-right text-rose-700">Excluded / No Rec (Date)</th>
-                                    <th class="p-3.5 text-right text-slate-800">Total Updated (Date)</th>
-                                    <th class="p-3.5 text-right text-slate-600">Families Touched</th>
-                                    <th class="p-3.5 text-right text-slate-700">Cumulative Approved</th>
-                                    <th class="p-3.5 text-center">Daily Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dailyProgressTableBody" class="divide-y divide-slate-100 text-sm">
-                                <tr><td colspan="9" class="p-8 text-center text-slate-400">Loading daily block-wise card approval report...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                    <!-- TAB PANEL 2: 22-Block Daily Card Approval Progress Report -->
+                    <div id="adminTabPanelDaily" class="hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 bg-white flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-block bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Daily Monitoring</span>
+                                    <h3 class="font-bold text-slate-900 text-base">Block-Wise Daily Card Approval Progress Report</h3>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-0.5" id="dailyReportSubtitle">Real-time count of cards approved and processed by each of the 22 Blocks on the selected date (IST).</p>
+                            </div>
 
-                <!-- 22-Block Live Leaderboard Table -->
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                        <div>
-                            <h3 class="font-bold text-slate-800 text-sm">22-Block Live Performance Leaderboard</h3>
-                            <span class="text-xs text-slate-500">Click any Block row to jump straight to its DEO Terminal</span>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button onclick="setDailyReportDateOffset(0)" class="px-2.5 py-1.5 bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-300 rounded-lg text-xs font-bold transition cursor-pointer">Today</button>
+                                <button onclick="setDailyReportDateOffset(-1)" class="px-2.5 py-1.5 bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-300 rounded-lg text-xs font-bold transition cursor-pointer">Yesterday</button>
+                                <input
+                                    type="date"
+                                    id="dailyProgressDate"
+                                    onchange="loadDailyProgressReport()"
+                                    class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                >
+                                <button onclick="loadDailyProgressReport()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition cursor-pointer">
+                                    🔄 Refresh
+                                </button>
+                                <button onclick="exportDailyProgressExcel()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer">
+                                    📥 Download Daily Report (.xlsx)
+                                </button>
+                            </div>
                         </div>
-                        <div class="w-full sm:w-64">
-                            <input
-                                type="text"
-                                id="leaderboardSearchInput"
-                                oninput="filterLeaderboardRows(this.value)"
-                                placeholder="Filter blocks (e.g. Mirzapur)..."
-                                class="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold shadow-2xs"
-                            >
+
+                        <!-- Daily KPI Summary Row -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-slate-50/70 border-b border-slate-200">
+                            <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl">
+                                <p class="text-[11px] font-bold text-emerald-700 uppercase">Cards Approved on Date</p>
+                                <p class="text-2xl font-black text-emerald-900 mt-0.5 font-mono" id="dailyStatApproved">--</p>
+                                <p class="text-xs text-emerald-700 mt-0.5 font-medium" id="dailyStatApprovedSub">Base + Extra Approved</p>
+                            </div>
+                            <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-xl">
+                                <p class="text-[11px] font-bold text-amber-700 uppercase">Portal Pending on Date</p>
+                                <p class="text-2xl font-black text-amber-900 mt-0.5 font-mono" id="dailyStatPending">--</p>
+                                <p class="text-xs text-amber-700 mt-0.5">Submitted &amp; awaiting approval</p>
+                            </div>
+                            <div class="bg-indigo-50 border border-indigo-200 p-3.5 rounded-xl">
+                                <p class="text-[11px] font-bold text-indigo-700 uppercase">Total Processed on Date</p>
+                                <p class="text-2xl font-black text-indigo-900 mt-0.5 font-mono" id="dailyStatProcessed">--</p>
+                                <p class="text-xs text-indigo-700 mt-0.5" id="dailyStatFamilies">-- Families Touched</p>
+                            </div>
+                            <div class="bg-rose-50 border border-rose-200 p-3.5 rounded-xl">
+                                <p class="text-[11px] font-bold text-rose-700 uppercase">Block Participation</p>
+                                <p class="text-2xl font-black text-rose-900 mt-0.5 font-mono" id="dailyStatActiveBlocks">-- / 22</p>
+                                <p class="text-xs text-rose-700 mt-0.5" id="dailyStatZeroBlocks">-- Blocks with 0 Approvals</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b border-slate-200 bg-slate-100/75 text-slate-600 text-xs uppercase font-bold sticky top-0 z-10 backdrop-blur">
-                                    <th class="p-3.5">Rank &amp; Block</th>
-                                    <th class="p-3.5 text-right">Families</th>
-                                    <th class="p-3.5 text-right">Base Members</th>
-                                    <th class="p-3.5 text-right text-emerald-700">Approved</th>
-                                    <th class="p-3.5 text-right text-amber-700">Portal Pending</th>
-                                    <th class="p-3.5 text-right text-slate-700">Not Applied</th>
-                                    <th class="p-3.5 text-right text-purple-700">No Record</th>
-                                    <th class="p-3.5 text-right text-rose-700">Not Traceable</th>
-                                    <th class="p-3.5 text-right text-indigo-700">+ Extra Added</th>
-                                    <th class="p-3.5 w-40">Completion Rate</th>
-                                </tr>
-                            </thead>
-                            <tbody id="leaderboardTableBody" class="divide-y divide-slate-100 text-sm">
-                                <tr><td colspan="10" class="p-8 text-center text-slate-400">Loading 22-block statistics from Supabase...</td></tr>
-                            </tbody>
-                        </table>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-200 bg-slate-100 text-slate-600 text-xs uppercase font-bold">
+                                        <th class="p-3.5">Rank &amp; Block</th>
+                                        <th class="p-3.5 text-right text-emerald-700">Approved (Date)</th>
+                                        <th class="p-3.5 text-right text-indigo-700">Base / +Extra</th>
+                                        <th class="p-3.5 text-right text-amber-700">Portal Pending (Date)</th>
+                                        <th class="p-3.5 text-right text-rose-700">Excluded / No Rec (Date)</th>
+                                        <th class="p-3.5 text-right text-slate-800">Total Updated (Date)</th>
+                                        <th class="p-3.5 text-right text-slate-600">Families Touched</th>
+                                        <th class="p-3.5 text-right text-slate-700">Cumulative Approved</th>
+                                        <th class="p-3.5 text-center">Daily Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dailyProgressTableBody" class="divide-y divide-slate-100 text-sm">
+                                    <tr><td colspan="9" class="p-8 text-center text-slate-400">Loading daily block-wise card approval report...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

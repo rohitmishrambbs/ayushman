@@ -4,6 +4,61 @@
  * ============================================================================
  */
 
+function switchAdminWorkspaceTab(tab) {
+    const lbBtn = document.getElementById('adminTabBtnLeaderboard');
+    const dailyBtn = document.getElementById('adminTabBtnDaily');
+    const lbPanel = document.getElementById('adminTabPanelLeaderboard');
+    const dailyPanel = document.getElementById('adminTabPanelDaily');
+
+    if (!lbBtn || !dailyBtn || !lbPanel || !dailyPanel) return;
+
+    const activeClasses = "inline-flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition border-t border-x border-slate-200 bg-white text-indigo-700 shadow-2xs -mb-px cursor-pointer";
+    const inactiveClasses = "inline-flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition border-t border-x border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer";
+
+    if (tab === 'daily') {
+        lbBtn.className = inactiveClasses;
+        dailyBtn.className = activeClasses;
+        lbPanel.classList.add('hidden');
+        dailyPanel.classList.remove('hidden');
+    } else {
+        lbBtn.className = activeClasses;
+        dailyBtn.className = inactiveClasses;
+        lbPanel.classList.remove('hidden');
+        dailyPanel.classList.add('hidden');
+    }
+}
+
+function toggleAdminFilterDrawer(forceState) {
+    const drawer = document.getElementById('adminFilterDrawer');
+    const btn = document.getElementById('toggleAdminFilterDrawerBtn');
+    const chevron = document.getElementById('toggleAdminFilterDrawerChevron');
+    if (!drawer) return;
+
+    const willOpen = typeof forceState === 'boolean' ? forceState : drawer.classList.contains('hidden');
+
+    if (willOpen) {
+        drawer.classList.remove('hidden');
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+        if (btn) {
+            btn.classList.remove('bg-indigo-50', 'text-indigo-700');
+            btn.classList.add('bg-indigo-600', 'text-white');
+        }
+        updateAdminFilterMatchCount();
+    } else {
+        drawer.classList.add('hidden');
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+        if (btn) {
+            btn.classList.add('bg-indigo-50', 'text-indigo-700');
+            btn.classList.remove('bg-indigo-600', 'text-white');
+        }
+    }
+}
+
+function dismissAntiCheatBanner() {
+    const banner = document.getElementById('antiCheatBanner');
+    if (banner) banner.classList.add('hidden');
+}
+
 function filterLeaderboardRows(query) {
     const q = (query || '').trim().toLowerCase();
     const rows = document.querySelectorAll('#leaderboardTableBody tr');
@@ -311,6 +366,13 @@ async function loadDailyProgressReport() {
         document.getElementById('dailyStatActiveBlocks').innerText = `${activeBlocksCount} / ${sortedBlocks.length} Active`;
         document.getElementById('dailyStatZeroBlocks').innerText = `${zeroApprovedBlocksCount} Blocks with 0 Approvals`;
 
+        const quickBadge = document.getElementById('dailyTabQuickBadge');
+        if (quickBadge) {
+            const isToday = selectedDate === getIstDateString(0);
+            const labelPrefix = isToday ? 'Today' : selectedDate;
+            quickBadge.innerText = `${labelPrefix}: +${totalDayApproved.toLocaleString()} Approved`;
+        }
+
         tbody.innerHTML = '';
 
         sortedBlocks.forEach((row, idx) => {
@@ -521,12 +583,21 @@ async function checkSpeedAnomalies() {
             });
 
         if (anomalies.length === 0) {
-            banner.className = "mb-4 p-4 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-800 text-xs font-bold animate-fade-in";
-            banner.innerHTML = `<span class="text-sm mr-1">✓</span> Velocity Audit Passed: No bulk-clicking anomalies (>6 families/min) detected in the last 24 hours.`;
+            banner.className = "mb-4 p-4 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-800 text-xs font-bold animate-fade-in flex items-center justify-between gap-3";
+            banner.innerHTML = `
+                <div><span class="text-sm mr-1">✓</span> Velocity Audit Passed: No bulk-clicking anomalies (&gt;6 families/min) detected in the last 24 hours.</div>
+                <button onclick="dismissAntiCheatBanner()" class="text-emerald-700 hover:text-emerald-950 font-black px-2 py-0.5 rounded cursor-pointer">✕</button>
+            `;
             showToast("Velocity Audit: No anomalies detected", "success", 2500);
         } else {
             banner.className = "mb-4 p-4 rounded-xl border bg-rose-50 border-rose-300 text-rose-800 text-xs font-bold space-y-1 animate-fade-in";
-            banner.innerHTML = `<p class="flex items-center gap-1.5"><span class="text-sm">⚠️</span> Speed Anomaly Detected (>6 families updated in a single minute):</p><p class="font-mono text-[11px] bg-rose-100/60 p-2 rounded-lg mt-1">${anomalies.join(' | ')}</p>`;
+            banner.innerHTML = `
+                <div class="flex items-center justify-between gap-3">
+                    <p class="flex items-center gap-1.5"><span class="text-sm">⚠️</span> Speed Anomaly Detected (&gt;6 families updated in a single minute):</p>
+                    <button onclick="dismissAntiCheatBanner()" class="text-rose-700 hover:text-rose-950 font-black px-2 py-0.5 rounded cursor-pointer">✕</button>
+                </div>
+                <p class="font-mono text-[11px] bg-rose-100/60 p-2 rounded-lg mt-1">${anomalies.join(' | ')}</p>
+            `;
             showToast("Speed anomalies detected!", "warning", 3000);
         }
     } catch (err) {
