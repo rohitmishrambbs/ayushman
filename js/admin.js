@@ -84,10 +84,11 @@ function getIstDateString(offsetDays = 0) {
 
 function setDailyReportDateOffset(offsetDays) {
     if (!isMasterAdmin()) return;
-    const dateInput = document.getElementById('dailyProgressDate');
-    if (dateInput) {
-        dateInput.value = getIstDateString(offsetDays);
-    }
+    const targetDate = getIstDateString(offsetDays);
+    const fromInput = document.getElementById('dailyProgressFromDate');
+    const toInput = document.getElementById('dailyProgressToDate');
+    if (fromInput) fromInput.value = targetDate;
+    if (toInput) toInput.value = targetDate;
     loadDailyProgressReport();
 }
 
@@ -96,10 +97,11 @@ async function loadAdminLeaderboard() {
         return;
     }
 
-    const dateInput = document.getElementById('dailyProgressDate');
-    if (dateInput && !dateInput.value) {
-        dateInput.value = getIstDateString(0);
-    }
+    const todayStr = getIstDateString(0);
+    const fromInput = document.getElementById('dailyProgressFromDate');
+    const toInput = document.getElementById('dailyProgressToDate');
+    if (fromInput && !fromInput.value) fromInput.value = todayStr;
+    if (toInput && !toInput.value) toInput.value = todayStr;
 
     const tbody = document.getElementById('leaderboardTableBody');
     tbody.innerHTML = `
@@ -216,27 +218,43 @@ async function loadAdminLeaderboard() {
 async function loadDailyProgressReport() {
     if (!isMasterAdmin()) return;
 
-    const dateInput = document.getElementById('dailyProgressDate');
-    if (dateInput && !dateInput.value) {
-        dateInput.value = getIstDateString(0);
+    const todayStr = getIstDateString(0);
+    const fromInput = document.getElementById('dailyProgressFromDate');
+    const toInput = document.getElementById('dailyProgressToDate');
+    if (fromInput && !fromInput.value) fromInput.value = todayStr;
+    if (toInput && !toInput.value) toInput.value = todayStr;
+
+    let fromDate = (fromInput && fromInput.value) ? fromInput.value : todayStr;
+    let toDate = (toInput && toInput.value) ? toInput.value : fromDate;
+
+    if (fromDate > toDate) {
+        const temp = fromDate;
+        fromDate = toDate;
+        toDate = temp;
+        if (fromInput) fromInput.value = fromDate;
+        if (toInput) toInput.value = toDate;
     }
-    const selectedDate = (dateInput && dateInput.value) ? dateInput.value : getIstDateString(0);
-    currentDailyReportDate = selectedDate;
+
+    const isSingleDay = fromDate === toDate;
+    const periodLabel = isSingleDay ? fromDate : `${fromDate} to ${toDate}`;
+    currentDailyReportDate = isSingleDay ? fromDate : `${fromDate}_to_${toDate}`;
 
     const tbody = document.getElementById('dailyProgressTableBody');
     const subtitle = document.getElementById('dailyReportSubtitle');
     if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-slate-400">Scanning block-wise card approvals for <b>${selectedDate}</b> (IST)...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">Scanning block-wise card approvals for <b>${periodLabel}</b> (IST)...</td></tr>`;
     }
     if (subtitle) {
-        subtitle.innerText = `Showing card approvals & field updates recorded between 00:00 and 23:59 IST on ${selectedDate}.`;
+        subtitle.innerText = isSingleDay
+            ? `Showing card approvals & field updates recorded on ${fromDate} (IST).`
+            : `Showing card approvals & field updates recorded from ${fromDate} to ${toDate} (IST).`;
     }
 
     try {
-        const startIso = new Date(`${selectedDate}T00:00:00.000+05:30`).toISOString();
-        const endIso = new Date(`${selectedDate}T23:59:59.999+05:30`).toISOString();
+        const startIso = new Date(`${fromDate}T00:00:00.000+05:30`).toISOString();
+        const endIso = new Date(`${toDate}T23:59:59.999+05:30`).toISOString();
 
-        // Fetch all records updated on selectedDate in 1,000-row pages
+        // Fetch all records updated in the selected date range in 1,000-row pages
         const dailyRows = [];
         const chunkSize = 1000;
         let offset = 0;
@@ -265,8 +283,6 @@ async function loadDailyProgressReport() {
             blockStatsMap.set(b.name, {
                 block_name: b.name,
                 daily_approved_total: 0,
-                daily_approved_base: 0,
-                daily_approved_extra: 0,
                 daily_pending: 0,
                 daily_excluded: 0,
                 daily_total_processed: 0,
@@ -289,8 +305,6 @@ async function loadDailyProgressReport() {
                 blockStatsMap.set(blk, {
                     block_name: blk,
                     daily_approved_total: 0,
-                    daily_approved_base: 0,
-                    daily_approved_extra: 0,
                     daily_pending: 0,
                     daily_excluded: 0,
                     daily_total_processed: 0,
@@ -301,7 +315,6 @@ async function loadDailyProgressReport() {
             }
 
             const entry = blockStatsMap.get(blk);
-            const isExtra = String(r.member_id ?? '').startsWith('EXTRA_');
             const famId = String(r.family_id ?? '');
 
             entry.daily_total_processed += 1;
@@ -312,11 +325,6 @@ async function loadDailyProgressReport() {
 
             if (statusVal === 'Approved') {
                 entry.daily_approved_total += 1;
-                if (isExtra) {
-                    entry.daily_approved_extra += 1;
-                } else {
-                    entry.daily_approved_base += 1;
-                }
             } else if (statusVal === 'Portal Pending') {
                 entry.daily_pending += 1;
             } else if (statusVal === 'No Record Found' || statusVal === 'Not Traceable') {
@@ -340,8 +348,6 @@ async function loadDailyProgressReport() {
         cachedDailyProgress = sortedBlocks;
 
         let totalDayApproved = 0;
-        let totalDayApprovedBase = 0;
-        let totalDayApprovedExtra = 0;
         let totalDayPending = 0;
         let totalDayProcessed = 0;
         let activeBlocksCount = 0;
@@ -349,8 +355,6 @@ async function loadDailyProgressReport() {
 
         sortedBlocks.forEach(b => {
             totalDayApproved += b.daily_approved_total;
-            totalDayApprovedBase += b.daily_approved_base;
-            totalDayApprovedExtra += b.daily_approved_extra;
             totalDayPending += b.daily_pending;
             totalDayProcessed += b.daily_total_processed;
             if (b.daily_total_processed > 0) activeBlocksCount += 1;
@@ -358,7 +362,6 @@ async function loadDailyProgressReport() {
         });
 
         document.getElementById('dailyStatApproved').innerText = totalDayApproved.toLocaleString();
-        document.getElementById('dailyStatApprovedSub').innerText = `(${totalDayApprovedBase.toLocaleString()}B + ${totalDayApprovedExtra.toLocaleString()}Ex)`;
         document.getElementById('dailyStatPending').innerText = totalDayPending.toLocaleString();
         document.getElementById('dailyStatProcessed').innerText = totalDayProcessed.toLocaleString();
         document.getElementById('dailyStatFamilies').innerText = `${districtFamiliesSet.size.toLocaleString()} Fam`;
@@ -367,8 +370,8 @@ async function loadDailyProgressReport() {
 
         const quickBadge = document.getElementById('dailyTabQuickBadge');
         if (quickBadge) {
-            const isToday = selectedDate === getIstDateString(0);
-            const labelPrefix = isToday ? 'Today' : selectedDate;
+            const isToday = isSingleDay && fromDate === todayStr;
+            const labelPrefix = isToday ? 'Today' : periodLabel;
             quickBadge.innerText = `${labelPrefix}: +${totalDayApproved.toLocaleString()} Approved`;
         }
 
@@ -407,16 +410,11 @@ async function loadDailyProgressReport() {
                 <td class="p-3.5 text-right font-mono font-black text-base ${row.daily_approved_total > 0 ? 'text-emerald-700' : 'text-rose-500'}">
                     ${row.daily_approved_total > 0 ? `+${row.daily_approved_total.toLocaleString()}` : '0'}
                 </td>
-                <td class="p-3.5 text-right font-mono text-xs text-slate-600">
-                    <span class="font-bold text-slate-800">${row.daily_approved_base.toLocaleString()}</span> Base / <span class="font-bold text-indigo-700">+${row.daily_approved_extra.toLocaleString()}</span> Ex
-                </td>
                 <td class="p-3.5 text-right font-mono font-semibold text-amber-600">${row.daily_pending.toLocaleString()}</td>
                 <td class="p-3.5 text-right font-mono font-semibold text-rose-600">${row.daily_excluded.toLocaleString()}</td>
                 <td class="p-3.5 text-right font-mono font-bold text-slate-800">${row.daily_total_processed.toLocaleString()}</td>
                 <td class="p-3.5 text-right font-mono text-slate-600">${row.daily_families.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono text-xs text-slate-700">
-                    <span class="font-bold text-emerald-800">${row.cumulative_approved.toLocaleString()}</span> / ${row.base_total.toLocaleString()} (${cumPct}%)
-                </td>
+                <td class="p-3.5 text-right font-mono text-sm font-bold text-emerald-800">${cumPct}%</td>
                 <td class="p-3.5 text-center">${statusBadge}</td>
             `;
             tbody.appendChild(tr);
@@ -424,7 +422,7 @@ async function loadDailyProgressReport() {
     } catch (err) {
         console.error("Daily progress report error:", err);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-rose-600 font-semibold">Error loading daily progress: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-rose-600 font-semibold">Error loading daily progress: ${err.message}</td></tr>`;
         }
     }
 }

@@ -497,16 +497,26 @@
                                 </button>
                             </div>
 
-                            <!-- Context Control B: Daily Report Date Controls + Daily Excel Button -->
+                            <!-- Context Control B: Daily Report From-To Date Controls + Daily Excel Button -->
                             <div id="adminTopCtrlDaily" class="hidden flex-wrap items-center gap-1.5">
                                 <button onclick="setDailyReportDateOffset(0)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-300 rounded-lg text-xs font-bold transition cursor-pointer">Today</button>
                                 <button onclick="setDailyReportDateOffset(-1)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-300 rounded-lg text-xs font-bold transition cursor-pointer">Yesterday</button>
-                                <input
-                                    type="date"
-                                    id="dailyProgressDate"
-                                    onchange="loadDailyProgressReport()"
-                                    class="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                >
+                                <div class="inline-flex items-center gap-1 bg-slate-50 border border-slate-300 rounded-lg px-2 py-1">
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase">From</span>
+                                    <input
+                                        type="date"
+                                        id="dailyProgressFromDate"
+                                        onchange="loadDailyProgressReport()"
+                                        class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+                                    >
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase px-0.5">To</span>
+                                    <input
+                                        type="date"
+                                        id="dailyProgressToDate"
+                                        onchange="loadDailyProgressReport()"
+                                        class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+                                    >
+                                </div>
                                 <button onclick="exportDailyProgressExcel()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs active:scale-95 cursor-pointer">
                                     <span>📥</span>
                                     <span>Download Daily Report (.xlsx)</span>
@@ -670,11 +680,10 @@
                 <div id="adminTabPanelDaily" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden">
                     <!-- Compact Daily Summary Strip -->
                     <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
-                        <p class="text-xs font-semibold text-slate-600" id="dailyReportSubtitle">Real-time card approvals recorded on selected date (IST).</p>
+                        <p class="text-xs font-semibold text-slate-600" id="dailyReportSubtitle">Real-time card approvals recorded in selected period (IST).</p>
                         <div class="flex flex-wrap items-center gap-3 text-xs">
                             <span class="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold">
                                 Approved: <strong id="dailyStatApproved" class="font-mono">--</strong>
-                                <span id="dailyStatApprovedSub" class="text-[11px] font-normal text-emerald-700 ml-1"></span>
                             </span>
                             <span class="px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 font-bold">
                                 Pending: <strong id="dailyStatPending" class="font-mono">--</strong>
@@ -695,18 +704,17 @@
                             <thead>
                                 <tr class="border-b border-slate-200 bg-slate-100 text-slate-600 text-xs uppercase font-bold">
                                     <th class="p-3.5">Rank &amp; Block</th>
-                                    <th class="p-3.5 text-right text-emerald-700">Approved (Date)</th>
-                                    <th class="p-3.5 text-right text-indigo-700">Base / +Extra</th>
-                                    <th class="p-3.5 text-right text-amber-700">Portal Pending (Date)</th>
-                                    <th class="p-3.5 text-right text-rose-700">Excluded / No Rec (Date)</th>
-                                    <th class="p-3.5 text-right text-slate-800">Total Updated (Date)</th>
+                                    <th class="p-3.5 text-right text-emerald-700">Approved</th>
+                                    <th class="p-3.5 text-right text-amber-700">Portal Pending</th>
+                                    <th class="p-3.5 text-right text-rose-700">Excluded / No Rec</th>
+                                    <th class="p-3.5 text-right text-slate-800">Total Updated</th>
                                     <th class="p-3.5 text-right text-slate-600">Families Touched</th>
                                     <th class="p-3.5 text-right text-slate-700">Cumulative Approved</th>
-                                    <th class="p-3.5 text-center">Daily Status</th>
+                                    <th class="p-3.5 text-center">Status</th>
                                 </tr>
                             </thead>
                             <tbody id="dailyProgressTableBody" class="divide-y divide-slate-100 text-sm">
-                                <tr><td colspan="9" class="p-8 text-center text-slate-400">Loading daily block-wise card approval report...</td></tr>
+                                <tr><td colspan="8" class="p-8 text-center text-slate-400">Loading block-wise card approval report...</td></tr>
                             </tbody>
                         </table>
                     </div>

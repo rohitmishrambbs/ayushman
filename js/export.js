@@ -387,18 +387,14 @@ function exportDailyProgressExcel() {
 
     const headers = [
         "Rank",
-        "Date_IST",
+        "Period_IST",
         "Block_Name",
-        "Daily_Approved_Total",
-        "Daily_Approved_Base",
-        "Daily_Approved_Extra",
-        "Daily_Portal_Pending",
-        "Daily_Excluded_NoRec_NotTraceable",
-        "Daily_Total_Updated",
-        "Daily_Families_Touched",
-        "Cumulative_Block_Approved",
-        "Block_Base_Target",
-        "Overall_Completion_Pct"
+        "Approved",
+        "Portal_Pending",
+        "Excluded_NoRec_NotTraceable",
+        "Total_Updated",
+        "Families_Touched",
+        "Cumulative_Approved_Pct"
     ];
 
     const aoa = [headers];
@@ -410,33 +406,25 @@ function exportDailyProgressExcel() {
             String(reportDate),
             String(r.block_name ?? ''),
             { t: 'n', v: Number(r.daily_approved_total || 0), z: '0' },
-            { t: 'n', v: Number(r.daily_approved_base || 0), z: '0' },
-            { t: 'n', v: Number(r.daily_approved_extra || 0), z: '0' },
             { t: 'n', v: Number(r.daily_pending || 0), z: '0' },
             { t: 'n', v: Number(r.daily_excluded || 0), z: '0' },
             { t: 'n', v: Number(r.daily_total_processed || 0), z: '0' },
             { t: 'n', v: Number(r.daily_families || 0), z: '0' },
-            { t: 'n', v: Number(r.cumulative_approved || 0), z: '0' },
-            { t: 'n', v: Number(r.base_total || 0), z: '0' },
-            { t: 'n', v: cumPct, z: '0.00' }
+            `${cumPct}%`
         ]);
     });
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!cols'] = [
         { wch: 8 },
-        { wch: 14 },
-        { wch: 18 },
-        { wch: 20 },
-        { wch: 20 },
-        { wch: 20 },
-        { wch: 20 },
-        { wch: 28 },
-        { wch: 20 },
-        { wch: 22 },
         { wch: 24 },
         { wch: 18 },
-        { wch: 22 }
+        { wch: 14 },
+        { wch: 16 },
+        { wch: 28 },
+        { wch: 16 },
+        { wch: 18 },
+        { wch: 24 }
     ];
 
     const wb = XLSX.utils.book_new();
