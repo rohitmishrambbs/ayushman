@@ -246,12 +246,7 @@
                         <div class="bg-gradient-to-tr from-indigo-600 to-indigo-500 px-3 py-1.5 rounded-xl font-black text-lg tracking-wider shadow-md shadow-indigo-500/30 ring-1 ring-white/15">
                             BoCW
                         </div>
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <h1 class="font-bold text-base leading-tight">Azamgarh District Execution Hub</h1>
-                                <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Live Cloud</span>
-                            </div>
-                        </div>
+                        <h1 class="font-bold text-base leading-tight">Azamgarh</h1>
                     </div>
 
                     <!-- Mobile-only Logout button -->
@@ -296,21 +291,9 @@
 
             <!-- VIEW A: BLOCK DEO TERMINAL -->
             <div id="deoView" class="space-y-6">
+                <span id="activeBlockTitle" class="hidden"></span>
+                <span id="syncStatusText" class="hidden"></span>
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-3.5 space-y-2.5">
-                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2.5 border-b border-slate-100 pb-2.5">
-                        <div>
-                            <h2 class="text-lg font-bold text-slate-900 tracking-tight" id="activeBlockTitle">MOHAMMADPUR Block Terminal</h2>
-                        </div>
-
-                        <div class="bg-slate-50/80 border border-slate-200/90 px-3 py-1.5 rounded-xl text-right shrink-0">
-                            <div class="flex items-center justify-end gap-1.5">
-                                <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Sync Status</p>
-                            </div>
-                            <p class="text-xs font-bold text-indigo-600 font-mono mt-0.5" id="syncStatusText">Initializing...</p>
-                        </div>
-                    </div>
-
                     <!-- Filters Grid -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5">
                         <div class="lg:col-span-3">

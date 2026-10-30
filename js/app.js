@@ -67,7 +67,8 @@ async function onBlockChange() {
     const block = getAuthorizedBlock();
     if (!block) return;
 
-    document.getElementById('activeBlockTitle').innerText = `${block} Block Terminal`;
+    const titleEl = document.getElementById('activeBlockTitle');
+    if (titleEl) titleEl.innerText = `${block} Block Terminal`;
     const searchInput = document.getElementById('searchInput');
     if (searchInput) searchInput.value = '';
     const clearBtn = document.getElementById('clearSearchBtn');

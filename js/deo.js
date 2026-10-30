@@ -65,7 +65,8 @@ async function loadBlockData() {
     if (!block) return;
 
     const displayBlockTitle = block === 'ALL' ? 'ALL 22 BLOCKS (District-Wide)' : block;
-    document.getElementById('activeBlockTitle').innerText = `${displayBlockTitle} Block Terminal`;
+    const titleEl = document.getElementById('activeBlockTitle');
+    if (titleEl) titleEl.innerText = `${displayBlockTitle} Block Terminal`;
 
     const gp = document.getElementById('gpSelector').value;
     const statusFilter = document.getElementById('statusFilter').value;
@@ -74,7 +75,7 @@ async function loadBlockData() {
     const statusText = document.getElementById('syncStatusText');
 
     try {
-        statusText.innerText = "Fetching Cloud Data...";
+        if (statusText) statusText.innerText = "Fetching Cloud Data...";
         container.innerHTML = renderSkeletonLoader();
 
         let query = supabaseClient
