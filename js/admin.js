@@ -684,7 +684,7 @@ async function loadCopiedFamilyReport() {
     const subtitle = document.getElementById('copiedReportSubtitle');
 
     if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400">Scanning GP-wise unique copied Family ID numbers from timestamp data for <b>${block === 'ALL' ? 'All 22 Blocks' : block}</b>...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400">Scanning GP-wise unique copied Family ID numbers from timestamp data for <b>${block === 'ALL' ? 'All 22 Blocks' : block}</b>...</td></tr>`;
     }
     if (subtitle) {
         subtitle.innerText = block === 'ALL'
@@ -841,7 +841,7 @@ async function loadCopiedFamilyReport() {
         if (gpRows.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="p-10 text-center text-slate-500">
+                    <td colspan="7" class="p-10 text-center text-slate-500">
                         <p class="font-bold text-slate-700">No timestamped Family IDs found yet for ${block === 'ALL' ? 'any block' : block}.</p>
                         <p class="text-xs text-slate-400 mt-1">Select a Block from the dropdown above to see all its GPs.</p>
                     </td>
@@ -870,6 +870,8 @@ async function loadCopiedFamilyReport() {
                 showToast(`Opened ${row.gp_name} (${row.block_name})`, 'info', 2000);
             };
 
+            const timeLabel = formatIstTimestampShort(row.latest_updated_at);
+
             tr.innerHTML = `
                 <td class="p-3.5 font-bold text-slate-700 whitespace-nowrap">${idx + 1}. ${escapeHtml(row.block_name)}</td>
                 <td class="p-3.5 font-bold text-slate-900">${escapeHtml(row.gp_name)}</td>
@@ -879,6 +881,7 @@ async function loadCopiedFamilyReport() {
                 </td>
                 <td class="p-3.5 text-right font-mono font-bold text-emerald-700">${row.copied_processed.toLocaleString()}</td>
                 <td class="p-3.5 text-right font-mono font-semibold text-amber-700">${row.copied_unprocessed.toLocaleString()}</td>
+                <td class="p-3.5 text-right font-mono text-xs text-slate-500">${escapeHtml(timeLabel)}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -890,7 +893,7 @@ async function loadCopiedFamilyReport() {
     } catch (err) {
         console.error("Copied Family ID report error:", err);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-rose-600 font-semibold">Error loading report: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-rose-600 font-semibold">Error loading report: ${err.message}</td></tr>`;
         }
     }
 }

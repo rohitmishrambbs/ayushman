@@ -613,7 +613,8 @@ function exportCopiedFamilyReportExcel() {
         "Total Families in GP",
         "Unique Family IDs Copied",
         "Copied & Processed Families",
-        "Copied & Not Processed Families"
+        "Copied & Not Processed Families",
+        "Unique Copied Family IDs"
     ];
 
     const gpAoa = [gpHeaders];
@@ -635,7 +636,8 @@ function exportCopiedFamilyReportExcel() {
             { t: 'n', v: r.total_families, z: '0' },
             { t: 'n', v: r.copied_count, z: '0' },
             { t: 'n', v: r.copied_processed, z: '0' },
-            { t: 'n', v: r.copied_unprocessed, z: '0' }
+            { t: 'n', v: r.copied_unprocessed, z: '0' },
+            r.copied_family_ids.join(', ')
         ]);
     });
 
@@ -646,7 +648,8 @@ function exportCopiedFamilyReportExcel() {
         { t: 'n', v: sumTotalFam, z: '0' },
         { t: 'n', v: sumCopied, z: '0' },
         { t: 'n', v: sumProc, z: '0' },
-        { t: 'n', v: sumUnproc, z: '0' }
+        { t: 'n', v: sumUnproc, z: '0' },
+        ""
     ]);
 
     const wsGp = XLSX.utils.aoa_to_sheet(gpAoa);
@@ -657,13 +660,57 @@ function exportCopiedFamilyReportExcel() {
         { wch: 20 },
         { wch: 24 },
         { wch: 26 },
-        { wch: 28 }
+        { wch: 28 },
+        { wch: 50 }
+    ];
+
+    const famHeaders = [
+        "S.No.",
+        "Block Name",
+        "Name of GP",
+        "Unique Copied Family ID",
+        "Mobile No",
+        "Total Members in Family",
+        "No. of Member Processed",
+        "No. of Member Not Processed",
+        "Timestamp (updated_at)"
+    ];
+
+    const famAoa = [famHeaders];
+    (cachedCopiedReport.familyRows || []).forEach((f, idx) => {
+        const famNum = Number(String(f.family_id ?? '').replace(/\D/g, ''));
+        const mobNum = Number(String(f.mobile_no ?? '').replace(/\D/g, ''));
+        famAoa.push([
+            { t: 'n', v: idx + 1, z: '0' },
+            String(f.block_name ?? ''),
+            String(f.gp_name ?? ''),
+            !isNaN(famNum) && famNum > 0 ? { t: 'n', v: famNum, z: '0' } : String(f.family_id ?? ''),
+            !isNaN(mobNum) && mobNum > 0 ? { t: 'n', v: mobNum, z: '0' } : String(f.mobile_no ?? ''),
+            { t: 'n', v: f.total_members, z: '0' },
+            { t: 'n', v: f.processed_members, z: '0' },
+            { t: 'n', v: f.not_processed_members, z: '0' },
+            String(f.updated_at ?? '')
+        ]);
+    });
+
+    const wsFam = XLSX.utils.aoa_to_sheet(famAoa);
+    wsFam['!cols'] = [
+        { wch: 8 },
+        { wch: 18 },
+        { wch: 26 },
+        { wch: 24 },
+        { wch: 16 },
+        { wch: 22 },
+        { wch: 24 },
+        { wch: 26 },
+        { wch: 26 }
     ];
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, wsGp, "GP_Wise_Copied_Summary");
+    XLSX.utils.book_append_sheet(wb, wsFam, "Unique_Copied_Family_IDs");
 
-    const filename = `BoCW_${scopeLabel}_GP_Copied_Family_Summary.xlsx`;
+    const filename = `BoCW_${scopeLabel}_GP_Copied_Family_IDs.xlsx`;
     XLSX.writeFile(wb, filename);
     showToast(`Downloaded ${filename} successfully!`, "success", 3000);
 }
