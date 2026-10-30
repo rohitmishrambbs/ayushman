@@ -441,8 +441,7 @@ async function onAdminBlockFilterChange() {
 
     gpSelect.innerHTML = `<option value="ALL">Loading GPs for ${block}...</option>`;
     try {
-        const { data, error } = await supabaseClient.rpc('get_block_gps', { p_block: block });
-        if (error) throw error;
+        const data = await fetchBlockGPsWithLiveCounts(block);
 
         gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats in ${block} (${data ? data.length : 0} GPs)</option>`;
         if (data && data.length > 0) {
