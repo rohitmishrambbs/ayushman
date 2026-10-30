@@ -164,7 +164,7 @@ function renderFamilyGroups(records, totalCount) {
         familiesMap.get(famId).members.push(rec);
     });
 
-    countLabel.innerText = `Showing ${records.length} of ${totalCount.toLocaleString()} Members (${familiesMap.size} Families on Page ${currentPage})`;
+    countLabel.innerText = `${records.length} of ${totalCount.toLocaleString()} Members (${familiesMap.size} Families on Page ${currentPage})`;
     container.innerHTML = '';
 
     const isDistrictWide = getAuthorizedBlock() === 'ALL';
@@ -203,13 +203,11 @@ function renderFamilyGroups(records, totalCount) {
 
             // Clean demographic line
             const demographicLine = isExtra
-                ? `<p class="text-xs text-indigo-600 font-medium pl-6">Added from PM-JAY Portal &bull; Member ID: <span class="italic text-slate-400">Blank</span></p>`
+                ? `<p class="text-xs text-indigo-600 font-medium pl-6">Added from PM-JAY Portal</p>`
                 : `<p class="text-xs text-slate-500 pl-6 flex flex-wrap items-center gap-1.5 mt-0.5">
                     <span>Father/Spouse: <strong class="font-semibold text-slate-800">${escapeHtml(fatherName || 'N/A')}</strong></span>
                     <span>&bull;</span>
                     <span>DOB: <span class="text-slate-700 font-medium">${escapeHtml(dob || 'N/A')}</span></span>
-                    <span>&bull;</span>
-                    <span class="font-mono text-[11px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">ID: ${escapeHtml(memId)}</span>
                    </p>`;
 
             const titleFormatted = isExtra

@@ -180,7 +180,7 @@ async function exportCampCallListExcel() {
     const searchQuery = document.getElementById('searchInput').value.trim();
     const statusText = document.getElementById('syncStatusText');
     const btnEl = document.getElementById('terminalExportBtn');
-    const originalBtnHtml = btnEl ? btnEl.innerHTML : '<span>📥</span><span>Download List (.xlsx)</span>';
+    const originalBtnHtml = btnEl ? btnEl.innerHTML : '<span>Download List (.xlsx)</span>';
 
     try {
         isExportInProgress = true;
