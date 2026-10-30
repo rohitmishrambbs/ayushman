@@ -251,7 +251,6 @@
                                 <h1 class="font-bold text-base leading-tight">Azamgarh District Execution Hub</h1>
                                 <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Live Cloud</span>
                             </div>
-                            <p class="text-[11px] text-slate-400 mt-0.5">70,673 Base Members &bull; 17,922 Families &bull; 22 Blocks</p>
                         </div>
                     </div>
 
@@ -297,49 +296,40 @@
 
             <!-- VIEW A: BLOCK DEO TERMINAL -->
             <div id="deoView" class="space-y-6">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-5 space-y-4">
-                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-100 pb-4">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-3.5 space-y-2.5">
+                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2.5 border-b border-slate-100 pb-2.5">
                         <div>
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-[11px] font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wider border border-indigo-100">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                                    Field Execution Workspace
-                                </span>
-                            </div>
-                            <h2 class="text-xl font-bold text-slate-900 tracking-tight" id="activeBlockTitle">MOHAMMADPUR Block Terminal</h2>
-                            <p class="text-xs text-slate-500 mt-1">
-                                💡 Tip: Click any <span class="bg-slate-100 font-mono px-1.5 py-0.5 rounded text-slate-700 font-bold">📋 Family ID</span> to copy for PM-JAY. Use <span class="text-indigo-600 font-bold">+ Add Member</span> if extra beneficiaries appear on portal.
-                            </p>
+                            <h2 class="text-lg font-bold text-slate-900 tracking-tight" id="activeBlockTitle">MOHAMMADPUR Block Terminal</h2>
                         </div>
 
-                        <div class="bg-slate-50/80 border border-slate-200/90 px-4 py-2 rounded-xl text-right shrink-0">
+                        <div class="bg-slate-50/80 border border-slate-200/90 px-3 py-1.5 rounded-xl text-right shrink-0">
                             <div class="flex items-center justify-end gap-1.5">
                                 <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                                <p class="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Sync Status</p>
+                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Sync Status</p>
                             </div>
-                            <p class="text-sm font-bold text-indigo-600 font-mono mt-0.5" id="syncStatusText">Initializing...</p>
+                            <p class="text-xs font-bold text-indigo-600 font-mono mt-0.5" id="syncStatusText">Initializing...</p>
                         </div>
                     </div>
 
                     <!-- Filters Grid -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5">
                         <div class="lg:col-span-3">
-                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">1. Assigned Block</label>
-                            <select id="blockSelector" onchange="onBlockChange()" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-sm">
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1 uppercase tracking-wide">1. Assigned Block</label>
+                            <select id="blockSelector" onchange="onBlockChange()" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-sm">
                                 <option value="MOHAMMADPUR" selected>MOHAMMADPUR (3,542)</option>
                             </select>
                         </div>
 
                         <div class="lg:col-span-3">
-                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">2. Gram Panchayat (GP)</label>
-                            <select id="gpSelector" onchange="resetPageAndLoad()" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-sm">
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1 uppercase tracking-wide">2. Gram Panchayat (GP)</label>
+                            <select id="gpSelector" onchange="resetPageAndLoad()" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-sm">
                                 <option value="ALL">All Gram Panchayats</option>
                             </select>
                         </div>
 
                         <div class="lg:col-span-2">
-                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">3. Status Filter</label>
-                            <select id="statusFilter" onchange="resetPageAndLoad()" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-sm">
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1 uppercase tracking-wide">3. Status Filter</label>
+                            <select id="statusFilter" onchange="resetPageAndLoad()" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-sm">
                                 <option value="ALL" selected>All Statuses</option>
                                 <option value="Not Applied">Not Applied (आवेदन नहीं)</option>
                                 <option value="Approved">Approved (स्वीकृत)</option>
@@ -351,11 +341,11 @@
                         </div>
 
                         <div class="lg:col-span-4">
-                            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">4. Search (Name, Family ID, Mobile)</label>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1 uppercase tracking-wide">4. Search (Name, Family ID, Mobile)</label>
                             <div class="flex gap-2">
                                 <div class="relative w-full">
-                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
                                         </svg>
                                     </span>
@@ -365,14 +355,14 @@
                                         onkeydown="if(event.key==='Enter') resetPageAndLoad()"
                                         oninput="toggleSearchClearButton(this)"
                                         placeholder="Paste Family ID, Name, Mobile... (Enter ↵)"
-                                        class="w-full pl-10 pr-8 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/80 focus:border-indigo-500 focus:bg-white shadow-sm"
+                                        class="w-full pl-8 pr-7 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/80 focus:border-indigo-500 focus:bg-white shadow-sm"
                                     >
                                     <button
                                         type="button"
                                         id="clearSearchBtn"
                                         onclick="clearSearchInput()"
                                         title="Clear search"
-                                        class="hidden absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-700 font-bold text-base cursor-pointer"
+                                        class="hidden absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400 hover:text-slate-700 font-bold text-sm cursor-pointer"
                                     >
                                         ✕
                                     </button>
@@ -380,10 +370,10 @@
                                 <button
                                     id="searchBtn"
                                     onclick="resetPageAndLoad()"
-                                    class="group relative inline-flex items-center justify-center gap-1.5 px-5 py-2.5 btn-search-cool text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-500/25 hover:shadow-indigo-500/40 active:scale-95 shrink-0 overflow-hidden cursor-pointer"
+                                    class="group relative inline-flex items-center justify-center gap-1.5 px-4 py-2 btn-search-cool text-white text-xs font-bold rounded-lg shadow-sm shadow-indigo-500/25 hover:shadow-indigo-500/40 active:scale-95 shrink-0 overflow-hidden cursor-pointer"
                                 >
                                     <span class="absolute inset-0 w-full h-full btn-search-shimmer"></span>
-                                    <svg id="searchBtnIcon" class="w-4 h-4 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <svg id="searchBtnIcon" class="w-3.5 h-3.5 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
                                     </svg>
                                     <span class="relative tracking-wide">Search</span>
@@ -394,10 +384,7 @@
 
                     <!-- Live Block Summary Bar (7 Interactive Cards) -->
                     <div class="pt-2 border-t border-slate-100">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Quick Metrics Overview (Click box to filter status):</span>
-                        </div>
-                        <div id="blockSummaryBar" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 text-xs"></div>
+                        <div id="blockSummaryBar" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-xs"></div>
                     </div>
                 </div>
 

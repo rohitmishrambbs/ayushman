@@ -180,63 +180,63 @@ async function updateBlockSummaryBar(block) {
         const currentFilter = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : 'ALL';
 
         bar.innerHTML = `
-            <div onclick="quickFilterStatus('ALL')" title="Click to show all records" class="summary-stat-box bg-slate-50 p-3 rounded-xl border ${currentFilter === 'ALL' ? 'ring-2 ring-slate-800 border-slate-400' : 'border-slate-200'}">
+            <div onclick="quickFilterStatus('ALL')" title="Click to show all records" class="summary-stat-box bg-slate-50 px-2.5 py-2 rounded-lg border ${currentFilter === 'ALL' ? 'ring-2 ring-slate-800 border-slate-400' : 'border-slate-200'}">
                 <div class="flex items-center justify-between">
-                    <span class="block text-slate-500 font-bold uppercase text-[10px]">Base Total</span>
-                    <span class="text-xs text-slate-400">📋</span>
+                    <span class="block text-slate-500 font-bold uppercase text-[9.5px]">Base Total</span>
+                    <span class="text-[11px] text-slate-400">📋</span>
                 </div>
-                <div class="mt-1 flex items-baseline gap-1">
-                    <span class="font-black text-slate-900 text-base font-mono">${Number(row.total_members || 0).toLocaleString()}</span>
-                    <span class="font-normal text-[11px] text-slate-500">(${Number(row.total_families || 0).toLocaleString()} Fam)</span>
+                <div class="mt-0.5 flex items-baseline gap-1">
+                    <span class="font-black text-slate-900 text-sm font-mono">${Number(row.total_members || 0).toLocaleString()}</span>
+                    <span class="font-normal text-[10px] text-slate-500">(${Number(row.total_families || 0).toLocaleString()} Fam)</span>
                 </div>
             </div>
 
-            <div onclick="quickFilterStatus('Approved')" title="Click to filter Approved" class="summary-stat-box bg-emerald-50/80 p-3 rounded-xl border ${currentFilter === 'Approved' ? 'ring-2 ring-emerald-600 border-emerald-400' : 'border-emerald-200'}">
+            <div onclick="quickFilterStatus('Approved')" title="Click to filter Approved" class="summary-stat-box bg-emerald-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'Approved' ? 'ring-2 ring-emerald-600 border-emerald-400' : 'border-emerald-200'}">
                 <div class="flex items-center justify-between">
-                    <span class="block text-emerald-800 font-bold uppercase text-[10px]">Approved</span>
-                    <span class="text-xs text-emerald-600">✓</span>
+                    <span class="block text-emerald-800 font-bold uppercase text-[9.5px]">Approved</span>
+                    <span class="text-[11px] text-emerald-600">✓</span>
                 </div>
-                <span class="font-black text-emerald-900 text-base font-mono block mt-1">${Number(row.approved_members || 0).toLocaleString()}</span>
+                <span class="font-black text-emerald-900 text-sm font-mono block mt-0.5">${Number(row.approved_members || 0).toLocaleString()}</span>
             </div>
 
-            <div onclick="quickFilterStatus('Portal Pending')" title="Click to filter Portal Pending" class="summary-stat-box bg-amber-50/80 p-3 rounded-xl border ${currentFilter === 'Portal Pending' ? 'ring-2 ring-amber-600 border-amber-400' : 'border-amber-200'}">
+            <div onclick="quickFilterStatus('Portal Pending')" title="Click to filter Portal Pending" class="summary-stat-box bg-amber-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'Portal Pending' ? 'ring-2 ring-amber-600 border-amber-400' : 'border-amber-200'}">
                 <div class="flex items-center justify-between">
-                    <span class="block text-amber-800 font-bold uppercase text-[10px]">Portal Pending</span>
-                    <span class="text-xs text-amber-600">⏳</span>
+                    <span class="block text-amber-800 font-bold uppercase text-[9.5px]">Portal Pending</span>
+                    <span class="text-[11px] text-amber-600">⏳</span>
                 </div>
-                <span class="font-black text-amber-900 text-base font-mono block mt-1">${Number(row.pending_members || 0).toLocaleString()}</span>
+                <span class="font-black text-amber-900 text-sm font-mono block mt-0.5">${Number(row.pending_members || 0).toLocaleString()}</span>
             </div>
 
-            <div onclick="quickFilterStatus('Not Applied')" title="Click to filter Not Applied" class="summary-stat-box bg-slate-100 p-3 rounded-xl border ${currentFilter === 'Not Applied' ? 'ring-2 ring-slate-700 border-slate-400' : 'border-slate-300'}">
+            <div onclick="quickFilterStatus('Not Applied')" title="Click to filter Not Applied" class="summary-stat-box bg-slate-100 px-2.5 py-2 rounded-lg border ${currentFilter === 'Not Applied' ? 'ring-2 ring-slate-700 border-slate-400' : 'border-slate-300'}">
                 <div class="flex items-center justify-between">
-                    <span class="block text-slate-700 font-bold uppercase text-[10px]">Not Applied</span>
-                    <span class="text-xs text-slate-500">⚪</span>
+                    <span class="block text-slate-700 font-bold uppercase text-[9.5px]">Not Applied</span>
+                    <span class="text-[11px] text-slate-500">⚪</span>
                 </div>
-                <span class="font-black text-slate-900 text-base font-mono block mt-1">${notAppliedTotal.toLocaleString()}</span>
+                <span class="font-black text-slate-900 text-sm font-mono block mt-0.5">${notAppliedTotal.toLocaleString()}</span>
             </div>
 
-            <div onclick="quickFilterStatus('No Record Found')" title="Click to filter No Record Found" class="summary-stat-box bg-purple-50/80 p-3 rounded-xl border ${currentFilter === 'No Record Found' ? 'ring-2 ring-purple-600 border-purple-400' : 'border-purple-200'}">
+            <div onclick="quickFilterStatus('No Record Found')" title="Click to filter No Record Found" class="summary-stat-box bg-purple-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'No Record Found' ? 'ring-2 ring-purple-600 border-purple-400' : 'border-purple-200'}">
                 <div class="flex items-center justify-between">
-                    <span class="block text-purple-800 font-bold uppercase text-[10px]">No Record</span>
-                    <span class="text-xs text-purple-600">❓</span>
+                    <span class="block text-purple-800 font-bold uppercase text-[9.5px]">No Record</span>
+                    <span class="text-[11px] text-purple-600">❓</span>
                 </div>
-                <span class="font-black text-purple-900 text-base font-mono block mt-1">${Number(row.no_record_members || 0).toLocaleString()}</span>
+                <span class="font-black text-purple-900 text-sm font-mono block mt-0.5">${Number(row.no_record_members || 0).toLocaleString()}</span>
             </div>
 
-            <div onclick="quickFilterStatus('Not Traceable')" title="Click to filter Not Traceable" class="summary-stat-box bg-rose-50/80 p-3 rounded-xl border ${currentFilter === 'Not Traceable' ? 'ring-2 ring-rose-600 border-rose-400' : 'border-rose-200'}">
+            <div onclick="quickFilterStatus('Not Traceable')" title="Click to filter Not Traceable" class="summary-stat-box bg-rose-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'Not Traceable' ? 'ring-2 ring-rose-600 border-rose-400' : 'border-rose-200'}">
                 <div class="flex items-center justify-between">
-                    <span class="block text-rose-800 font-bold uppercase text-[10px]">Not Traceable</span>
-                    <span class="text-xs text-rose-600">✕</span>
+                    <span class="block text-rose-800 font-bold uppercase text-[9.5px]">Not Traceable</span>
+                    <span class="text-[11px] text-rose-600">✕</span>
                 </div>
-                <span class="font-black text-rose-900 text-base font-mono block mt-1">${Number(row.not_traceable_members || 0).toLocaleString()}</span>
+                <span class="font-black text-rose-900 text-sm font-mono block mt-0.5">${Number(row.not_traceable_members || 0).toLocaleString()}</span>
             </div>
 
-            <div onclick="quickFilterStatus('EXTRA_ONLY')" title="Click to filter Extra Added" class="summary-stat-box bg-indigo-50/80 p-3 rounded-xl border ${currentFilter === 'EXTRA_ONLY' ? 'ring-2 ring-indigo-600 border-indigo-400' : 'border-indigo-200'}">
+            <div onclick="quickFilterStatus('EXTRA_ONLY')" title="Click to filter Extra Added" class="summary-stat-box bg-indigo-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'EXTRA_ONLY' ? 'ring-2 ring-indigo-600 border-indigo-400' : 'border-indigo-200'}">
                 <div class="flex items-center justify-between">
-                    <span class="block text-indigo-800 font-bold uppercase text-[10px]">+ Extra Added</span>
-                    <span class="text-xs text-indigo-600">✨</span>
+                    <span class="block text-indigo-800 font-bold uppercase text-[9.5px]">+ Extra Added</span>
+                    <span class="text-[11px] text-indigo-600">✨</span>
                 </div>
-                <span class="font-black text-indigo-900 text-base font-mono block mt-1">+${extraTotal.toLocaleString()}</span>
+                <span class="font-black text-indigo-900 text-sm font-mono block mt-0.5">+${extraTotal.toLocaleString()}</span>
             </div>
         `;
     } catch (e) {
