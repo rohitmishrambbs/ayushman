@@ -28,10 +28,12 @@ async function initializeAuthenticatedApp() {
 
     configureBlockSelectorForSession(session);
 
+    const exportBtn = document.getElementById('terminalExportBtn');
     if (session.role === 'admin') {
         document.getElementById('roleSelector').value = 'admin';
         document.getElementById('deoView').classList.add('hidden');
         document.getElementById('adminView').classList.remove('hidden');
+        if (exportBtn) exportBtn.classList.add('hidden');
         await Promise.all([
             loadAdminLeaderboard(),
             loadGPDropdown(),
@@ -40,6 +42,7 @@ async function initializeAuthenticatedApp() {
     } else {
         document.getElementById('deoView').classList.remove('hidden');
         document.getElementById('adminView').classList.add('hidden');
+        if (exportBtn) exportBtn.classList.remove('hidden');
         await Promise.all([
             loadGPDropdown(),
             loadBlockData()
@@ -52,14 +55,17 @@ function switchRole(role) {
         return;
     }
 
+    const exportBtn = document.getElementById('terminalExportBtn');
     document.getElementById('roleSelector').value = role;
     if (role === 'admin') {
         document.getElementById('deoView').classList.add('hidden');
         document.getElementById('adminView').classList.remove('hidden');
+        if (exportBtn) exportBtn.classList.add('hidden');
         loadAdminLeaderboard();
     } else {
         document.getElementById('adminView').classList.add('hidden');
         document.getElementById('deoView').classList.remove('hidden');
+        if (exportBtn) exportBtn.classList.remove('hidden');
     }
 }
 
