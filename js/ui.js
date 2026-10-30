@@ -292,16 +292,6 @@ function renderFamilyGroups(records, totalCount) {
                             <span>Add Member</span>
                         </button>
                     </div>
-
-                    <!-- Whole Family Action Bar -->
-                    <div class="flex flex-wrap items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
-                        <span class="text-[11px] font-bold text-slate-500 uppercase px-1.5">Whole Family (${fam.members.length}):</span>
-                        <button onclick="toggleFamilyStatus('${safeFamId}', 'Approved')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-50 hover:bg-emerald-600 text-emerald-800 hover:text-white border border-emerald-300 transition cursor-pointer">Approve All</button>
-                        <button onclick="toggleFamilyStatus('${safeFamId}', 'Portal Pending')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-50 hover:bg-amber-500 text-amber-800 hover:text-white border border-amber-300 transition cursor-pointer">Pending All</button>
-                        <button onclick="toggleFamilyStatus('${safeFamId}', 'Not Applied')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-white hover:bg-slate-700 text-slate-700 hover:text-white border border-slate-300 transition cursor-pointer">Not Applied All</button>
-                        <button onclick="toggleFamilyStatus('${safeFamId}', 'No Record Found')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-purple-50 hover:bg-purple-600 text-purple-800 hover:text-white border border-purple-300 transition cursor-pointer">No Record All</button>
-                        <button onclick="handleNotTraceableClick('family', '${safeFamId}', '')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-50 hover:bg-rose-600 text-rose-800 hover:text-white border border-rose-300 transition cursor-pointer">Not Traceable All</button>
-                    </div>
                 </div>
 
                 <div class="space-y-2 pl-0 sm:pl-3 border-l-2 border-indigo-200">
