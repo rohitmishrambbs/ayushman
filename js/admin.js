@@ -5,52 +5,64 @@
  */
 
 function switchAdminWorkspaceTab(tab) {
-    const lbBtn = document.getElementById('adminTabBtnLeaderboard');
-    const dailyBtn = document.getElementById('adminTabBtnDaily');
+    const viewSelect = document.getElementById('adminViewSelector');
     const lbPanel = document.getElementById('adminTabPanelLeaderboard');
     const dailyPanel = document.getElementById('adminTabPanelDaily');
+    const filterDrawer = document.getElementById('adminFilterDrawer');
+    const topCtrlLb = document.getElementById('adminTopCtrlLeaderboard');
+    const topCtrlDaily = document.getElementById('adminTopCtrlDaily');
 
-    if (!lbBtn || !dailyBtn || !lbPanel || !dailyPanel) return;
+    if (viewSelect && viewSelect.value !== tab) {
+        viewSelect.value = tab;
+    }
 
-    const activeClasses = "inline-flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition border-t border-x border-slate-200 bg-white text-indigo-700 shadow-2xs -mb-px cursor-pointer";
-    const inactiveClasses = "inline-flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition border-t border-x border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer";
+    if (lbPanel) lbPanel.classList.add('hidden');
+    if (dailyPanel) dailyPanel.classList.add('hidden');
+    if (filterDrawer) filterDrawer.classList.add('hidden');
+    if (topCtrlLb) topCtrlLb.classList.add('hidden');
+    if (topCtrlDaily) {
+        topCtrlDaily.classList.add('hidden');
+        topCtrlDaily.classList.remove('flex');
+    }
 
     if (tab === 'daily') {
-        lbBtn.className = inactiveClasses;
-        dailyBtn.className = activeClasses;
-        lbPanel.classList.add('hidden');
-        dailyPanel.classList.remove('hidden');
+        if (dailyPanel) dailyPanel.classList.remove('hidden');
+        if (topCtrlDaily) {
+            topCtrlDaily.classList.remove('hidden');
+            topCtrlDaily.classList.add('flex');
+        }
+    } else if (tab === 'filter') {
+        if (filterDrawer) filterDrawer.classList.remove('hidden');
+        updateAdminFilterMatchCount();
     } else {
-        lbBtn.className = activeClasses;
-        dailyBtn.className = inactiveClasses;
-        lbPanel.classList.remove('hidden');
-        dailyPanel.classList.add('hidden');
+        if (lbPanel) lbPanel.classList.remove('hidden');
+        if (topCtrlLb) topCtrlLb.classList.remove('hidden');
     }
 }
 
 function toggleAdminFilterDrawer(forceState) {
     const drawer = document.getElementById('adminFilterDrawer');
-    const btn = document.getElementById('toggleAdminFilterDrawerBtn');
-    const chevron = document.getElementById('toggleAdminFilterDrawerChevron');
     if (!drawer) return;
-
     const willOpen = typeof forceState === 'boolean' ? forceState : drawer.classList.contains('hidden');
+    switchAdminWorkspaceTab(willOpen ? 'filter' : 'leaderboard');
+}
 
-    if (willOpen) {
-        drawer.classList.remove('hidden');
-        if (chevron) chevron.style.transform = 'rotate(180deg)';
-        if (btn) {
-            btn.classList.remove('bg-indigo-50', 'text-indigo-700');
-            btn.classList.add('bg-indigo-600', 'text-white');
-        }
-        updateAdminFilterMatchCount();
-    } else {
-        drawer.classList.add('hidden');
-        if (chevron) chevron.style.transform = 'rotate(0deg)';
-        if (btn) {
-            btn.classList.add('bg-indigo-50', 'text-indigo-700');
-            btn.classList.remove('bg-indigo-600', 'text-white');
-        }
+function handleAdminQuickAction(action) {
+    const selectEl = document.getElementById('adminQuickActionSelect');
+    if (selectEl) selectEl.value = '';
+    if (!action) return;
+
+    if (action === 'export_leaderboard') {
+        exportLeaderboardExcel();
+    } else if (action === 'export_daily') {
+        exportDailyProgressExcel();
+    } else if (action === 'export_filtered') {
+        switchAdminWorkspaceTab('filter');
+        exportAdminFilteredExcel();
+    } else if (action === 'velocity_check') {
+        checkSpeedAnomalies();
+    } else if (action === 'refresh_stats') {
+        loadAdminLeaderboard();
     }
 }
 
@@ -192,9 +204,9 @@ async function loadAdminLeaderboard() {
 
         const distPct = distM > 0 ? ((distApp / distM) * 100).toFixed(2) : '0.00';
         document.getElementById('statTotalMembers').innerText = distM.toLocaleString();
-        document.getElementById('statTotalFamilies').innerText = `${distF.toLocaleString()} Families • ${cachedLeaderboard.length} Blocks`;
+        document.getElementById('statTotalFamilies').innerText = `${distF.toLocaleString()} Fam`;
         document.getElementById('statApproved').innerText = distApp.toLocaleString();
-        document.getElementById('statApprovedPct').innerText = `${distPct}% Completion (${(distM - distNA).toLocaleString()} Processed)`;
+        document.getElementById('statApprovedPct').innerText = `${distPct}%`;
         document.getElementById('statPending').innerText = distPend.toLocaleString();
         document.getElementById('statNotApplied').innerText = distNA.toLocaleString();
         document.getElementById('statOther').innerText = (distNoRec + distTr).toLocaleString();
@@ -359,12 +371,12 @@ async function loadDailyProgressReport() {
         });
 
         document.getElementById('dailyStatApproved').innerText = totalDayApproved.toLocaleString();
-        document.getElementById('dailyStatApprovedSub').innerText = `${totalDayApprovedBase.toLocaleString()} Base + ${totalDayApprovedExtra.toLocaleString()} Extra`;
+        document.getElementById('dailyStatApprovedSub').innerText = `(${totalDayApprovedBase.toLocaleString()}B + ${totalDayApprovedExtra.toLocaleString()}Ex)`;
         document.getElementById('dailyStatPending').innerText = totalDayPending.toLocaleString();
         document.getElementById('dailyStatProcessed').innerText = totalDayProcessed.toLocaleString();
-        document.getElementById('dailyStatFamilies').innerText = `${districtFamiliesSet.size.toLocaleString()} Unique Families Touched`;
-        document.getElementById('dailyStatActiveBlocks').innerText = `${activeBlocksCount} / ${sortedBlocks.length} Active`;
-        document.getElementById('dailyStatZeroBlocks').innerText = `${zeroApprovedBlocksCount} Blocks with 0 Approvals`;
+        document.getElementById('dailyStatFamilies').innerText = `${districtFamiliesSet.size.toLocaleString()} Fam`;
+        document.getElementById('dailyStatActiveBlocks').innerText = `${activeBlocksCount}/${sortedBlocks.length}`;
+        document.getElementById('dailyStatZeroBlocks').innerText = `${zeroApprovedBlocksCount} with 0 App`;
 
         const quickBadge = document.getElementById('dailyTabQuickBadge');
         if (quickBadge) {
