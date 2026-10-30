@@ -852,9 +852,36 @@ async function loadCopiedFamilyReport() {
     if (!isMasterAdmin()) return;
 
     const blockSelect = document.getElementById('copiedReportBlockSelector');
-    const block = (blockSelect && blockSelect.value) ? blockSelect.value : 'MOHAMMADPUR';
+    const block = (blockSelect && blockSelect.value) ? blockSelect.value : '';
     const tbody = document.getElementById('copiedReportTableBody');
     const subtitle = document.getElementById('copiedReportSubtitle');
+
+    if (!block) {
+        if (subtitle) {
+            subtitle.innerText = "Please select a Block from the dropdown above to view GP-wise report.";
+        }
+        const statGPs = document.getElementById('copiedStatGPs');
+        const statFam = document.getElementById('copiedStatFamilies');
+        const statProc = document.getElementById('copiedStatProcessed');
+        const statUnproc = document.getElementById('copiedStatUnprocessed');
+        if (statGPs) statGPs.innerText = '--';
+        if (statFam) statFam.innerText = '--';
+        if (statProc) statProc.innerText = '--';
+        if (statUnproc) statUnproc.innerText = '--';
+
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="p-10 text-center text-slate-500">
+                        <p class="font-bold text-slate-700">Please select a Block from the dropdown above.</p>
+                        <p class="text-xs text-slate-400 mt-1">Choose a specific Block or "ALL 22 BLOCKS" to view unique Family IDs copied by DEOs.</p>
+                    </td>
+                </tr>
+            `;
+        }
+        cachedCopiedReport = { gpRows: [], familyRows: [], blockScope: '' };
+        return;
+    }
 
     if (tbody) {
         tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400">Scanning GP-wise unique copied Family IDs for <b>${block === 'ALL' ? 'All 22 Blocks' : block}</b>...</td></tr>`;
@@ -1036,12 +1063,12 @@ function renderCopiedReportRows() {
     if (!tbody) return;
 
     if (!cachedCopiedReport || !cachedCopiedReport.gpRows || cachedCopiedReport.gpRows.length === 0) {
-        const block = (document.getElementById('copiedReportBlockSelector') || {}).value || 'MOHAMMADPUR';
+        const block = (document.getElementById('copiedReportBlockSelector') || {}).value || '';
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" class="p-10 text-center text-slate-500">
-                    <p class="font-bold text-slate-700">No copied Family IDs recorded yet for ${block === 'ALL' ? 'any block' : block}.</p>
-                    <p class="text-xs text-slate-400 mt-1">Select a specific Block from the dropdown above to see all its GPs, or click "📋 Family ID (Copy)" in the DEO Terminal.</p>
+                    <p class="font-bold text-slate-700">${block ? `No copied Family IDs recorded yet for ${block === 'ALL' ? 'any block' : block}.` : 'Please select a Block from the dropdown above.'}</p>
+                    <p class="text-xs text-slate-400 mt-1">${block ? 'Select a specific Block from the dropdown above to see all its GPs, or click "📋 Family ID (Copy)" in the DEO Terminal.' : 'Choose a specific Block or "ALL 22 BLOCKS" to view unique Family IDs copied by DEOs.'}</p>
                 </td>
             </tr>
         `;

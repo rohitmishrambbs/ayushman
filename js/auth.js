@@ -163,6 +163,8 @@ function logoutPortalUser() {
     if (dailyTbody) dailyTbody.innerHTML = '';
     const copiedTbody = document.getElementById('copiedReportTableBody');
     if (copiedTbody) copiedTbody.innerHTML = '';
+    const copiedBlockSelect = document.getElementById('copiedReportBlockSelector');
+    if (copiedBlockSelect) copiedBlockSelect.value = '';
     const antiCheatBanner = document.getElementById('antiCheatBanner');
     if (antiCheatBanner) antiCheatBanner.classList.add('hidden');
     document.getElementById('appShell').classList.add('hidden');
@@ -220,8 +222,9 @@ function configureBlockSelectorForSession(session) {
 
         const copiedBlockSelector = document.getElementById('copiedReportBlockSelector');
         if (copiedBlockSelector) {
-            const prevCopiedBlock = copiedBlockSelector.value || 'MOHAMMADPUR';
+            const prevCopiedBlock = copiedBlockSelector.value || '';
             copiedBlockSelector.innerHTML =
+                `<option value="" ${!prevCopiedBlock ? 'selected' : ''}>Select Block</option>` +
                 `<option value="ALL" ${prevCopiedBlock === 'ALL' ? 'selected' : ''}>🌐 ALL 22 BLOCKS (Copied GPs)</option>` +
                 ALL_BLOCKS_META.map(b =>
                     `<option value="${b.name}" ${b.name === prevCopiedBlock ? 'selected' : ''}>${b.label}</option>`
