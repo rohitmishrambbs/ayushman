@@ -59,10 +59,6 @@ function handleAdminQuickAction(action) {
     } else if (action === 'export_filtered') {
         switchAdminWorkspaceTab('filter');
         exportAdminFilteredExcel();
-    } else if (action === 'velocity_check') {
-        checkSpeedAnomalies();
-    } else if (action === 'refresh_stats') {
-        loadAdminLeaderboard();
     }
 }
 
