@@ -56,9 +56,6 @@ function handleAdminQuickAction(action) {
         exportLeaderboardExcel();
     } else if (action === 'export_daily') {
         exportDailyProgressExcel();
-    } else if (action === 'export_filtered') {
-        switchAdminWorkspaceTab('filter');
-        exportAdminFilteredExcel();
     }
 }
 
