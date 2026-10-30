@@ -4,6 +4,30 @@
  * ============================================================================
  */
 
+// ============================================================================
+// Table Sorting State & Icon Manager for ACMO Tables
+// ============================================================================
+let leaderboardSortState = { col: null, asc: false };
+let dailyProgressSortState = { col: null, asc: false };
+let copiedReportSortState = { col: null, asc: false };
+
+function updateSortIcons(tableId, sortState) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    table.querySelectorAll('th[data-sort]').forEach(th => {
+        const col = th.getAttribute('data-sort');
+        const indicator = th.querySelector('.sort-indicator');
+        if (!indicator) return;
+        if (col === sortState.col) {
+            indicator.innerText = sortState.asc ? '▲' : '▼';
+            indicator.className = 'sort-indicator text-[11px] text-indigo-600 font-bold';
+        } else {
+            indicator.innerText = '↕';
+            indicator.className = 'sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600';
+        }
+    });
+}
+
 function switchAdminWorkspaceTab(tab) {
     const viewSelect = document.getElementById('adminViewSelector');
     const lbPanel = document.getElementById('adminTabPanelLeaderboard');
@@ -85,6 +109,143 @@ function filterLeaderboardRows(query) {
     });
 }
 
+function sortLeaderboardTable(col) {
+    if (leaderboardSortState.col === col) {
+        leaderboardSortState.asc = !leaderboardSortState.asc;
+    } else {
+        leaderboardSortState.col = col;
+        leaderboardSortState.asc = (col === 'block');
+    }
+    renderLeaderboardRows();
+    updateSortIcons('leaderboardTable', leaderboardSortState);
+}
+
+function renderLeaderboardRows() {
+    const tbody = document.getElementById('leaderboardTableBody');
+    if (!tbody) return;
+
+    if (!cachedLeaderboard || cachedLeaderboard.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-slate-400">No records found.</td></tr>`;
+        return;
+    }
+
+    let rows = [...cachedLeaderboard];
+    if (leaderboardSortState.col) {
+        const { col, asc } = leaderboardSortState;
+        rows.sort((a, b) => {
+            let valA, valB;
+            switch (col) {
+                case 'block':
+                    valA = String(a.block_name || '');
+                    valB = String(b.block_name || '');
+                    return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                case 'families':
+                    valA = Number(a.total_families || 0);
+                    valB = Number(b.total_families || 0);
+                    break;
+                case 'members':
+                    valA = Number(a.total_members || 0);
+                    valB = Number(b.total_members || 0);
+                    break;
+                case 'approved':
+                    valA = Number(a.approved_members || 0);
+                    valB = Number(b.approved_members || 0);
+                    break;
+                case 'pending':
+                    valA = Number(a.pending_members || 0);
+                    valB = Number(b.pending_members || 0);
+                    break;
+                case 'not_applied':
+                    valA = Number(a.not_applied_members || 0) + Number(a.unidentified_members || 0);
+                    valB = Number(b.not_applied_members || 0) + Number(b.unidentified_members || 0);
+                    break;
+                case 'no_record':
+                    valA = Number(a.no_record_members || 0);
+                    valB = Number(b.no_record_members || 0);
+                    break;
+                case 'not_traceable':
+                    valA = Number(a.not_traceable_members || 0);
+                    valB = Number(b.not_traceable_members || 0);
+                    break;
+                case 'extra':
+                    valA = Number(a.extra_added_members || 0);
+                    valB = Number(b.extra_added_members || 0);
+                    break;
+                case 'pct':
+                    valA = Number(a.total_members || 0) > 0 ? (Number(a.approved_members || 0) / Number(a.total_members || 0)) : 0;
+                    valB = Number(b.total_members || 0) > 0 ? (Number(b.approved_members || 0) / Number(b.total_members || 0)) : 0;
+                    break;
+                default:
+                    return 0;
+            }
+            return asc ? (valA - valB) : (valB - valA);
+        });
+    }
+
+    tbody.innerHTML = '';
+    rows.forEach((row, i) => {
+        const tM = Number(row.total_members || 0);
+        const tF = Number(row.total_families || 0);
+        const appM = Number(row.approved_members || 0);
+        const pendM = Number(row.pending_members || 0);
+        const naM = Number(row.not_applied_members || 0) + Number(row.unidentified_members || 0);
+        const noRecM = Number(row.no_record_members || 0);
+        const trM = Number(row.not_traceable_members || 0);
+        const exM = Number(row.extra_added_members || 0);
+        const pct = tM > 0 ? ((appM / tM) * 100).toFixed(1) : '0.0';
+
+        let rankBadge = `<span class="w-6 h-6 rounded-full bg-slate-100 text-slate-600 font-bold text-xs flex items-center justify-center">${i + 1}</span>`;
+        if (i === 0) rankBadge = `<span class="text-base" title="Rank 1">🥇</span>`;
+        else if (i === 1) rankBadge = `<span class="text-base" title="Rank 2">🥈</span>`;
+        else if (i === 2) rankBadge = `<span class="text-base" title="Rank 3">🥉</span>`;
+
+        let barColor = 'bg-emerald-500';
+        if (Number(pct) < 10) barColor = 'bg-slate-400';
+        else if (Number(pct) < 25) barColor = 'bg-indigo-500';
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-indigo-50/70 group cursor-pointer transition-colors duration-150";
+        tr.title = `Click to switch to ${row.block_name} DEO Terminal`;
+        tr.onclick = () => {
+            if (!isMasterAdmin()) return;
+            document.getElementById('blockSelector').value = row.block_name;
+            switchRole('deo');
+            onBlockChange();
+            showToast(`Switched to ${row.block_name} Terminal`, 'info', 2000);
+        };
+
+        tr.innerHTML = `
+            <td class="p-3.5 font-bold text-slate-900 flex items-center gap-2">
+                ${rankBadge}
+                <span>${row.block_name}</span>
+                <span class="opacity-0 group-hover:opacity-100 text-indigo-600 text-xs font-normal transition-opacity">↗</span>
+            </td>
+            <td class="p-3.5 text-right font-mono text-slate-600">${tF.toLocaleString()}</td>
+            <td class="p-3.5 text-right font-mono font-semibold text-slate-800">${tM.toLocaleString()}</td>
+            <td class="p-3.5 text-right font-mono font-bold text-emerald-700 bg-emerald-50/30">${appM.toLocaleString()}</td>
+            <td class="p-3.5 text-right font-mono font-semibold text-amber-700">${pendM.toLocaleString()}</td>
+            <td class="p-3.5 text-right font-mono font-semibold text-slate-700">${naM.toLocaleString()}</td>
+            <td class="p-3.5 text-right font-mono font-semibold text-purple-600">${noRecM.toLocaleString()}</td>
+            <td class="p-3.5 text-right font-mono font-semibold text-rose-700">${trM.toLocaleString()}</td>
+            <td class="p-3.5 text-right font-mono font-bold text-indigo-700">+${exM.toLocaleString()}</td>
+            <td class="p-3.5">
+                <div class="flex items-center gap-2">
+                    <div class="w-20 bg-slate-200 rounded-full h-2.5 overflow-hidden shadow-inner">
+                        <div class="${barColor} h-full rounded-full transition-all duration-500" style="width: ${Math.min(100, pct)}%"></div>
+                    </div>
+                    <span class="text-xs font-bold text-slate-800 font-mono">${pct}%</span>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    const searchInput = document.getElementById('leaderboardSearchInput');
+    if (searchInput && searchInput.value) {
+        filterLeaderboardRows(searchInput.value);
+    }
+}
+
 function getIstDateString(offsetDays = 0) {
     const now = new Date();
     // Convert current time to IST (+05:30)
@@ -142,9 +303,8 @@ async function loadAdminLeaderboard() {
         }
 
         let distM = 0, distF = 0, distApp = 0, distPend = 0, distNoRec = 0, distTr = 0, distNA = 0, distExtra = 0;
-        tbody.innerHTML = '';
 
-        cachedLeaderboard.forEach((row, i) => {
+        cachedLeaderboard.forEach((row) => {
             const tM = Number(row.total_members || 0);
             const tF = Number(row.total_families || 0);
             const appM = Number(row.approved_members || 0);
@@ -153,56 +313,9 @@ async function loadAdminLeaderboard() {
             const noRecM = Number(row.no_record_members || 0);
             const trM = Number(row.not_traceable_members || 0);
             const exM = Number(row.extra_added_members || 0);
-            const pct = tM > 0 ? ((appM / tM) * 100).toFixed(1) : '0.0';
 
             distM += tM; distF += tF; distApp += appM; distPend += pendM;
             distNoRec += noRecM; distTr += trM; distNA += naM; distExtra += exM;
-
-            let rankBadge = `<span class="w-6 h-6 rounded-full bg-slate-100 text-slate-600 font-bold text-xs flex items-center justify-center">${i + 1}</span>`;
-            if (i === 0) rankBadge = `<span class="text-base" title="Rank 1">🥇</span>`;
-            else if (i === 1) rankBadge = `<span class="text-base" title="Rank 2">🥈</span>`;
-            else if (i === 2) rankBadge = `<span class="text-base" title="Rank 3">🥉</span>`;
-
-            // Progress bar color based on percentage
-            let barColor = 'bg-emerald-500';
-            if (Number(pct) < 10) barColor = 'bg-slate-400';
-            else if (Number(pct) < 25) barColor = 'bg-indigo-500';
-
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-indigo-50/70 group cursor-pointer transition-colors duration-150";
-            tr.title = `Click to switch to ${row.block_name} DEO Terminal`;
-            tr.onclick = () => {
-                if (!isMasterAdmin()) return;
-                document.getElementById('blockSelector').value = row.block_name;
-                switchRole('deo');
-                onBlockChange();
-                showToast(`Switched to ${row.block_name} Terminal`, 'info', 2000);
-            };
-
-            tr.innerHTML = `
-                <td class="p-3.5 font-bold text-slate-900 flex items-center gap-2">
-                    ${rankBadge}
-                    <span>${row.block_name}</span>
-                    <span class="opacity-0 group-hover:opacity-100 text-indigo-600 text-xs font-normal transition-opacity">↗</span>
-                </td>
-                <td class="p-3.5 text-right font-mono text-slate-600">${tF.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono font-semibold text-slate-800">${tM.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono font-bold text-emerald-700 bg-emerald-50/30">${appM.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono font-semibold text-amber-700">${pendM.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono font-semibold text-slate-700">${naM.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono font-semibold text-purple-600">${noRecM.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono font-semibold text-rose-700">${trM.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono font-bold text-indigo-700">+${exM.toLocaleString()}</td>
-                <td class="p-3.5">
-                    <div class="flex items-center gap-2">
-                        <div class="w-20 bg-slate-200 rounded-full h-2.5 overflow-hidden shadow-inner">
-                            <div class="${barColor} h-full rounded-full transition-all duration-500" style="width: ${Math.min(100, pct)}%"></div>
-                        </div>
-                        <span class="text-xs font-bold text-slate-800 font-mono">${pct}%</span>
-                    </div>
-                </td>
-            `;
-            tbody.appendChild(tr);
         });
 
         const distPct = distM > 0 ? ((distApp / distM) * 100).toFixed(2) : '0.00';
@@ -215,11 +328,8 @@ async function loadAdminLeaderboard() {
         document.getElementById('statOther').innerText = (distNoRec + distTr).toLocaleString();
         document.getElementById('statExtraAdded').innerText = `+${distExtra.toLocaleString()}`;
 
-        // Re-apply block search filter if user had typed something
-        const searchInput = document.getElementById('leaderboardSearchInput');
-        if (searchInput && searchInput.value) {
-            filterLeaderboardRows(searchInput.value);
-        }
+        renderLeaderboardRows();
+        updateSortIcons('leaderboardTable', leaderboardSortState);
 
         await loadDailyProgressReport();
         const activeView = document.getElementById('adminViewSelector');
@@ -400,56 +510,131 @@ async function loadDailyProgressReport() {
             quickBadge.innerText = `${labelPrefix}: +${totalDayApproved.toLocaleString()} Approved`;
         }
 
-        tbody.innerHTML = '';
-
-        sortedBlocks.forEach((row, idx) => {
-            const tr = document.createElement('tr');
-            const isZero = row.daily_approved_total === 0 && row.daily_total_processed === 0;
-            tr.className = isZero
-                ? "bg-rose-50/30 hover:bg-rose-50/70 cursor-pointer transition"
-                : "hover:bg-indigo-50/50 cursor-pointer transition";
-
-            tr.onclick = () => {
-                if (!isMasterAdmin()) return;
-                document.getElementById('blockSelector').value = row.block_name;
-                document.getElementById('statusFilter').value = 'Approved';
-                switchRole('deo');
-                onBlockChange();
-            };
-
-            let statusBadge = '';
-            if (row.daily_approved_total >= 25) {
-                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">🔥 High Progress</span>`;
-            } else if (row.daily_approved_total > 0) {
-                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">✅ Active</span>`;
-            } else if (row.daily_total_processed > 0) {
-                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">⏳ Pending Only</span>`;
-            } else {
-                statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300">⚠️ 0 Activity</span>`;
-            }
-
-            const cumPct = row.base_total > 0 ? ((row.cumulative_approved / row.base_total) * 100).toFixed(1) : '0.0';
-
-            tr.innerHTML = `
-                <td class="p-3.5 font-bold text-slate-900">${idx + 1}. ${row.block_name}</td>
-                <td class="p-3.5 text-right font-mono font-black text-base ${row.daily_approved_total > 0 ? 'text-emerald-700' : 'text-rose-500'}">
-                    ${row.daily_approved_total > 0 ? `+${row.daily_approved_total.toLocaleString()}` : '0'}
-                </td>
-                <td class="p-3.5 text-right font-mono font-semibold text-amber-600">${row.daily_pending.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono font-semibold text-rose-600">${row.daily_excluded.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono font-bold text-slate-800">${row.daily_total_processed.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono text-slate-600">${row.daily_families.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono text-sm font-bold text-emerald-800">${cumPct}%</td>
-                <td class="p-3.5 text-center">${statusBadge}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+        renderDailyProgressRows();
+        updateSortIcons('dailyProgressTable', dailyProgressSortState);
     } catch (err) {
         console.error("Daily progress report error:", err);
         if (tbody) {
             tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-rose-600 font-semibold">Error loading daily progress: ${err.message}</td></tr>`;
         }
     }
+}
+
+function getDailyStatusScore(r) {
+    if (r.daily_approved_total >= 25) return 4;
+    if (r.daily_approved_total > 0) return 3;
+    if (r.daily_total_processed > 0) return 2;
+    return 1;
+}
+
+function sortDailyProgressTable(col) {
+    if (dailyProgressSortState.col === col) {
+        dailyProgressSortState.asc = !dailyProgressSortState.asc;
+    } else {
+        dailyProgressSortState.col = col;
+        dailyProgressSortState.asc = (col === 'block');
+    }
+    renderDailyProgressRows();
+    updateSortIcons('dailyProgressTable', dailyProgressSortState);
+}
+
+function renderDailyProgressRows() {
+    const tbody = document.getElementById('dailyProgressTableBody');
+    if (!tbody) return;
+
+    if (!cachedDailyProgress || cachedDailyProgress.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">No records found.</td></tr>`;
+        return;
+    }
+
+    let rows = [...cachedDailyProgress];
+    if (dailyProgressSortState.col) {
+        const { col, asc } = dailyProgressSortState;
+        rows.sort((a, b) => {
+            let valA, valB;
+            switch (col) {
+                case 'block':
+                    valA = String(a.block_name || '');
+                    valB = String(b.block_name || '');
+                    return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                case 'approved':
+                    valA = Number(a.daily_approved_total || 0);
+                    valB = Number(b.daily_approved_total || 0);
+                    break;
+                case 'pending':
+                    valA = Number(a.daily_pending || 0);
+                    valB = Number(b.daily_pending || 0);
+                    break;
+                case 'excluded':
+                    valA = Number(a.daily_excluded || 0);
+                    valB = Number(b.daily_excluded || 0);
+                    break;
+                case 'total':
+                    valA = Number(a.daily_total_processed || 0);
+                    valB = Number(b.daily_total_processed || 0);
+                    break;
+                case 'families':
+                    valA = Number(a.daily_families || 0);
+                    valB = Number(b.daily_families || 0);
+                    break;
+                case 'cum_pct':
+                    valA = a.base_total > 0 ? (a.cumulative_approved / a.base_total) : 0;
+                    valB = b.base_total > 0 ? (b.cumulative_approved / b.base_total) : 0;
+                    break;
+                case 'status':
+                    valA = getDailyStatusScore(a);
+                    valB = getDailyStatusScore(b);
+                    break;
+                default:
+                    return 0;
+            }
+            return asc ? (valA - valB) : (valB - valA);
+        });
+    }
+
+    tbody.innerHTML = '';
+    rows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        const isZero = row.daily_approved_total === 0 && row.daily_total_processed === 0;
+        tr.className = isZero
+            ? "bg-rose-50/30 hover:bg-rose-50/70 cursor-pointer transition"
+            : "hover:bg-indigo-50/50 cursor-pointer transition";
+
+        tr.onclick = () => {
+            if (!isMasterAdmin()) return;
+            document.getElementById('blockSelector').value = row.block_name;
+            document.getElementById('statusFilter').value = 'Approved';
+            switchRole('deo');
+            onBlockChange();
+        };
+
+        let statusBadge = '';
+        if (row.daily_approved_total >= 25) {
+            statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">🔥 High Progress</span>`;
+        } else if (row.daily_approved_total > 0) {
+            statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">✅ Active</span>`;
+        } else if (row.daily_total_processed > 0) {
+            statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">⏳ Pending Only</span>`;
+        } else {
+            statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300">⚠️ 0 Activity</span>`;
+        }
+
+        const cumPct = row.base_total > 0 ? ((row.cumulative_approved / row.base_total) * 100).toFixed(1) : '0.0';
+
+        tr.innerHTML = `
+            <td class="p-3.5 font-bold text-slate-900">${idx + 1}. ${row.block_name}</td>
+            <td class="p-3.5 text-right font-mono font-black text-base ${row.daily_approved_total > 0 ? 'text-emerald-700' : 'text-rose-500'}">
+                ${row.daily_approved_total > 0 ? `+${row.daily_approved_total.toLocaleString()}` : '0'}
+            </td>
+            <td class="p-3.5 text-right font-mono font-semibold text-amber-600">${row.daily_pending.toLocaleString()}</td>
+            <td class="p-3.5 text-right font-mono font-semibold text-rose-600">${row.daily_excluded.toLocaleString()}</td>
+            <td class="p-3.5 text-right font-mono font-bold text-slate-800">${row.daily_total_processed.toLocaleString()}</td>
+            <td class="p-3.5 text-right font-mono text-slate-600">${row.daily_families.toLocaleString()}</td>
+            <td class="p-3.5 text-right font-mono text-sm font-bold text-emerald-800">${cumPct}%</td>
+            <td class="p-3.5 text-center">${statusBadge}</td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
 async function onAdminBlockFilterChange() {
@@ -825,74 +1010,124 @@ async function loadCopiedFamilyReport() {
         document.getElementById('copiedStatProcessed').innerText = totalCopiedProc.toLocaleString();
         document.getElementById('copiedStatUnprocessed').innerText = totalCopiedUnproc.toLocaleString();
 
-        if (!tbody) return;
-
-        if (gpRows.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="p-10 text-center text-slate-500">
-                        <p class="font-bold text-slate-700">No copied Family IDs recorded yet for ${block === 'ALL' ? 'any block' : block}.</p>
-                        <p class="text-xs text-slate-400 mt-1">Select a specific Block from the dropdown above to see all its GPs, or click "📋 Family ID (Copy)" in the DEO Terminal.</p>
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-
-        tbody.innerHTML = '';
-        gpRows.forEach((row, idx) => {
-            const tr = document.createElement('tr');
-            tr.className = row.copied_count > 0
-                ? "bg-indigo-50/20 hover:bg-indigo-50/70 cursor-pointer transition"
-                : "hover:bg-slate-50 cursor-pointer transition";
-            tr.title = `Click to open ${row.block_name} -> ${row.gp_name} in DEO Terminal`;
-            tr.setAttribute('data-family-ids', row.copied_family_ids.join(' '));
-            tr.onclick = async () => {
-                if (!isMasterAdmin()) return;
-                document.getElementById('blockSelector').value = row.block_name;
-                document.getElementById('statusFilter').value = 'ALL';
-                document.getElementById('searchInput').value = '';
-                switchRole('deo');
-                currentPage = 1;
-                await loadGPDropdown();
-                document.getElementById('gpSelector').value = row.gp_name;
-                await loadBlockData();
-                showToast(`Opened ${row.gp_name} (${row.block_name})`, 'info', 2000);
-            };
-
-            const timeLabel = formatIstTimestampShort(row.latest_timestamp);
-
-
-
-
-
-
-
-
-
-
-            tr.innerHTML = `
-                <td class="p-3.5 font-bold text-slate-700 whitespace-nowrap">${idx + 1}. ${escapeHtml(row.block_name)}</td>
-                <td class="p-3.5 font-bold text-slate-900">${escapeHtml(row.gp_name)}</td>
-                <td class="p-3.5 text-right font-mono text-slate-600">${row.total_families.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono font-black text-base ${row.copied_count > 0 ? 'text-indigo-700' : 'text-slate-400'}">
-                    ${row.copied_count.toLocaleString()}
-                </td>
-                <td class="p-3.5 text-right font-mono font-bold text-emerald-700">${row.copied_processed.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono font-semibold text-amber-700">${row.copied_unprocessed.toLocaleString()}</td>
-                <td class="p-3.5 text-right font-mono text-xs text-slate-500 whitespace-nowrap">${escapeHtml(timeLabel)}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        const searchInput = document.getElementById('copiedReportSearchInput');
-        if (searchInput && searchInput.value) {
-            filterCopiedReportRows(searchInput.value);
-        }
+        renderCopiedReportRows();
+        updateSortIcons('copiedReportTable', copiedReportSortState);
     } catch (err) {
         console.error("Copied Family ID report error:", err);
         if (tbody) {
             tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-rose-600 font-semibold">Error loading report: ${err.message}</td></tr>`;
         }
+    }
+}
+
+function sortCopiedReportTable(col) {
+    if (copiedReportSortState.col === col) {
+        copiedReportSortState.asc = !copiedReportSortState.asc;
+    } else {
+        copiedReportSortState.col = col;
+        copiedReportSortState.asc = (col === 'block' || col === 'gp');
+    }
+    renderCopiedReportRows();
+    updateSortIcons('copiedReportTable', copiedReportSortState);
+}
+
+function renderCopiedReportRows() {
+    const tbody = document.getElementById('copiedReportTableBody');
+    if (!tbody) return;
+
+    if (!cachedCopiedReport || !cachedCopiedReport.gpRows || cachedCopiedReport.gpRows.length === 0) {
+        const block = (document.getElementById('copiedReportBlockSelector') || {}).value || 'MOHAMMADPUR';
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="p-10 text-center text-slate-500">
+                    <p class="font-bold text-slate-700">No copied Family IDs recorded yet for ${block === 'ALL' ? 'any block' : block}.</p>
+                    <p class="text-xs text-slate-400 mt-1">Select a specific Block from the dropdown above to see all its GPs, or click "📋 Family ID (Copy)" in the DEO Terminal.</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    let rows = [...cachedCopiedReport.gpRows];
+    if (copiedReportSortState.col) {
+        const { col, asc } = copiedReportSortState;
+        rows.sort((a, b) => {
+            let valA, valB;
+            switch (col) {
+                case 'block':
+                    valA = String(a.block_name || '');
+                    valB = String(b.block_name || '');
+                    return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                case 'gp':
+                    valA = String(a.gp_name || '');
+                    valB = String(b.gp_name || '');
+                    return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                case 'total_families':
+                    valA = Number(a.total_families || 0);
+                    valB = Number(b.total_families || 0);
+                    break;
+                case 'copied':
+                    valA = Number(a.copied_count || 0);
+                    valB = Number(b.copied_count || 0);
+                    break;
+                case 'processed':
+                    valA = Number(a.copied_processed || 0);
+                    valB = Number(b.copied_processed || 0);
+                    break;
+                case 'unprocessed':
+                    valA = Number(a.copied_unprocessed || 0);
+                    valB = Number(b.copied_unprocessed || 0);
+                    break;
+                case 'timestamp':
+                    valA = (a.latest_timestamp && !isNaN(new Date(a.latest_timestamp).getTime())) ? new Date(a.latest_timestamp).getTime() : 0;
+                    valB = (b.latest_timestamp && !isNaN(new Date(b.latest_timestamp).getTime())) ? new Date(b.latest_timestamp).getTime() : 0;
+                    break;
+                default:
+                    return 0;
+            }
+            return asc ? (valA - valB) : (valB - valA);
+        });
+    }
+
+    tbody.innerHTML = '';
+    rows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = row.copied_count > 0
+            ? "bg-indigo-50/20 hover:bg-indigo-50/70 cursor-pointer transition"
+            : "hover:bg-slate-50 cursor-pointer transition";
+        tr.title = `Click to open ${row.block_name} -> ${row.gp_name} in DEO Terminal`;
+        tr.setAttribute('data-family-ids', (row.copied_family_ids || []).join(' '));
+        tr.onclick = async () => {
+            if (!isMasterAdmin()) return;
+            document.getElementById('blockSelector').value = row.block_name;
+            document.getElementById('statusFilter').value = 'ALL';
+            document.getElementById('searchInput').value = '';
+            switchRole('deo');
+            currentPage = 1;
+            await loadGPDropdown();
+            document.getElementById('gpSelector').value = row.gp_name;
+            await loadBlockData();
+            showToast(`Opened ${row.gp_name} (${row.block_name})`, 'info', 2000);
+        };
+
+        const timeLabel = formatIstTimestampShort(row.latest_timestamp);
+
+        tr.innerHTML = `
+            <td class="p-3.5 font-bold text-slate-700 whitespace-nowrap">${idx + 1}. ${escapeHtml(row.block_name)}</td>
+            <td class="p-3.5 font-bold text-slate-900">${escapeHtml(row.gp_name)}</td>
+            <td class="p-3.5 text-right font-mono text-slate-600">${row.total_families.toLocaleString()}</td>
+            <td class="p-3.5 text-right font-mono font-black text-base ${row.copied_count > 0 ? 'text-indigo-700' : 'text-slate-400'}">
+                ${row.copied_count.toLocaleString()}
+            </td>
+            <td class="p-3.5 text-right font-mono font-bold text-emerald-700">${row.copied_processed.toLocaleString()}</td>
+            <td class="p-3.5 text-right font-mono font-semibold text-amber-700">${row.copied_unprocessed.toLocaleString()}</td>
+            <td class="p-3.5 text-right font-mono text-xs text-slate-500 whitespace-nowrap">${escapeHtml(timeLabel)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    const searchInput = document.getElementById('copiedReportSearchInput');
+    if (searchInput && searchInput.value) {
+        filterCopiedReportRows(searchInput.value);
     }
 }

@@ -150,6 +150,13 @@ function logoutPortalUser() {
     currentDailyReportDate = '';
     currentPage = 1;
 
+    leaderboardSortState = { col: null, asc: false };
+    dailyProgressSortState = { col: null, asc: false };
+    copiedReportSortState = { col: null, asc: false };
+    updateSortIcons('leaderboardTable', leaderboardSortState);
+    updateSortIcons('dailyProgressTable', dailyProgressSortState);
+    updateSortIcons('copiedReportTable', copiedReportSortState);
+
     document.getElementById('familyListContainer').innerHTML = '';
     document.getElementById('leaderboardTableBody').innerHTML = '';
     const dailyTbody = document.getElementById('dailyProgressTableBody');

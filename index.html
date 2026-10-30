@@ -684,19 +684,69 @@
                 <!-- 3. VIEW OPTION 1: 22-Block Live Performance Leaderboard -->
                 <div id="adminTabPanelLeaderboard" class="bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
+                        <table id="leaderboardTable" class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="border-b border-slate-200 bg-slate-50 text-slate-600 text-xs uppercase font-bold sticky top-0 z-10">
-                                    <th class="p-3.5">Rank &amp; Block</th>
-                                    <th class="p-3.5 text-right">Families</th>
-                                    <th class="p-3.5 text-right">Base Members</th>
-                                    <th class="p-3.5 text-right text-emerald-700">Approved</th>
-                                    <th class="p-3.5 text-right text-amber-700">Portal Pending</th>
-                                    <th class="p-3.5 text-right text-slate-700">Not Applied</th>
-                                    <th class="p-3.5 text-right text-purple-700">No Record</th>
-                                    <th class="p-3.5 text-right text-rose-700">Not Traceable</th>
-                                    <th class="p-3.5 text-right text-indigo-700">+ Extra Added</th>
-                                    <th class="p-3.5 w-40">Completion Rate</th>
+                                    <th data-sort="block" onclick="sortLeaderboardTable('block')" title="Click to sort by Block Name" class="p-3.5 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center gap-1">
+                                            <span>Rank &amp; Block</span>
+                                            <span class="sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="families" onclick="sortLeaderboardTable('families')" title="Click to sort by Total Families" class="p-3.5 text-right cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Families</span>
+                                            <span class="sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="members" onclick="sortLeaderboardTable('members')" title="Click to sort by Base Members" class="p-3.5 text-right cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Base Members</span>
+                                            <span class="sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="approved" onclick="sortLeaderboardTable('approved')" title="Click to sort by Approved Members" class="p-3.5 text-right text-emerald-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Approved</span>
+                                            <span class="sort-indicator text-[11px] text-emerald-400 group-hover:text-emerald-700">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="pending" onclick="sortLeaderboardTable('pending')" title="Click to sort by Pending Members" class="p-3.5 text-right text-amber-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Portal Pending</span>
+                                            <span class="sort-indicator text-[11px] text-amber-400 group-hover:text-amber-700">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="not_applied" onclick="sortLeaderboardTable('not_applied')" title="Click to sort by Not Applied" class="p-3.5 text-right text-slate-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Not Applied</span>
+                                            <span class="sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="no_record" onclick="sortLeaderboardTable('no_record')" title="Click to sort by No Record Found" class="p-3.5 text-right text-purple-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>No Record</span>
+                                            <span class="sort-indicator text-[11px] text-purple-400 group-hover:text-purple-700">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="not_traceable" onclick="sortLeaderboardTable('not_traceable')" title="Click to sort by Not Traceable" class="p-3.5 text-right text-rose-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Not Traceable</span>
+                                            <span class="sort-indicator text-[11px] text-rose-400 group-hover:text-rose-700">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="extra" onclick="sortLeaderboardTable('extra')" title="Click to sort by Extra Added" class="p-3.5 text-right text-indigo-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>+ Extra Added</span>
+                                            <span class="sort-indicator text-[11px] text-indigo-400 group-hover:text-indigo-700">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="pct" onclick="sortLeaderboardTable('pct')" title="Click to sort by Completion Rate" class="p-3.5 w-40 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center gap-1">
+                                            <span>Completion Rate</span>
+                                            <span class="sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600">↕</span>
+                                        </div>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody id="leaderboardTableBody" class="divide-y divide-slate-100 text-sm">
@@ -730,17 +780,57 @@
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
+                        <table id="dailyProgressTable" class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="border-b border-slate-200 bg-slate-100 text-slate-600 text-xs uppercase font-bold">
-                                    <th class="p-3.5">Rank &amp; Block</th>
-                                    <th class="p-3.5 text-right text-emerald-700">Approved</th>
-                                    <th class="p-3.5 text-right text-amber-700">Portal Pending</th>
-                                    <th class="p-3.5 text-right text-rose-700">Excluded / No Rec</th>
-                                    <th class="p-3.5 text-right text-slate-800">Total Updated</th>
-                                    <th class="p-3.5 text-right text-slate-600">Families Touched</th>
-                                    <th class="p-3.5 text-right text-slate-700">Cumulative Approved</th>
-                                    <th class="p-3.5 text-center">Status</th>
+                                    <th data-sort="block" onclick="sortDailyProgressTable('block')" title="Click to sort by Block Name" class="p-3.5 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center gap-1">
+                                            <span>Rank &amp; Block</span>
+                                            <span class="sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="approved" onclick="sortDailyProgressTable('approved')" title="Click to sort by Daily Approved" class="p-3.5 text-right text-emerald-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Approved</span>
+                                            <span class="sort-indicator text-[11px] text-emerald-400 group-hover:text-emerald-700">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="pending" onclick="sortDailyProgressTable('pending')" title="Click to sort by Daily Pending" class="p-3.5 text-right text-amber-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Portal Pending</span>
+                                            <span class="sort-indicator text-[11px] text-amber-400 group-hover:text-amber-700">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="excluded" onclick="sortDailyProgressTable('excluded')" title="Click to sort by Excluded / No Record" class="p-3.5 text-right text-rose-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Excluded / No Rec</span>
+                                            <span class="sort-indicator text-[11px] text-rose-400 group-hover:text-rose-700">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="total" onclick="sortDailyProgressTable('total')" title="Click to sort by Total Updated" class="p-3.5 text-right text-slate-800 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Total Updated</span>
+                                            <span class="sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="families" onclick="sortDailyProgressTable('families')" title="Click to sort by Families Touched" class="p-3.5 text-right text-slate-600 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Families Touched</span>
+                                            <span class="sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="cum_pct" onclick="sortDailyProgressTable('cum_pct')" title="Click to sort by Cumulative Approved %" class="p-3.5 text-right text-slate-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Cumulative Approved</span>
+                                            <span class="sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="status" onclick="sortDailyProgressTable('status')" title="Click to sort by Activity Status" class="p-3.5 text-center cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <span>Status</span>
+                                            <span class="sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600">↕</span>
+                                        </div>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody id="dailyProgressTableBody" class="divide-y divide-slate-100 text-sm">
@@ -772,16 +862,51 @@
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
+                        <table id="copiedReportTable" class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="border-b border-slate-200 bg-slate-100 text-slate-600 text-xs uppercase font-bold">
-                                    <th class="p-3.5"># &amp; Block</th>
-                                    <th class="p-3.5">Gram Panchayat (Name of GP)</th>
-                                    <th class="p-3.5 text-right text-slate-700">Total Families</th>
-                                    <th class="p-3.5 text-right text-indigo-700">Unique Family IDs Copied</th>
-                                    <th class="p-3.5 text-right text-emerald-700">Copied &amp; Processed</th>
-                                    <th class="p-3.5 text-right text-amber-700">Copied &amp; Not Processed</th>
-                                    <th class="p-3.5 text-right text-slate-700">Timestamp</th>
+                                    <th data-sort="block" onclick="sortCopiedReportTable('block')" title="Click to sort by Block Name" class="p-3.5 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center gap-1">
+                                            <span># &amp; Block</span>
+                                            <span class="sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="gp" onclick="sortCopiedReportTable('gp')" title="Click to sort by Gram Panchayat" class="p-3.5 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center gap-1">
+                                            <span>Gram Panchayat (Name of GP)</span>
+                                            <span class="sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="total_families" onclick="sortCopiedReportTable('total_families')" title="Click to sort by Total Families" class="p-3.5 text-right text-slate-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Total Families</span>
+                                            <span class="sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="copied" onclick="sortCopiedReportTable('copied')" title="Click to sort by Unique Copied Family IDs" class="p-3.5 text-right text-indigo-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Unique Family IDs Copied</span>
+                                            <span class="sort-indicator text-[11px] text-indigo-400 group-hover:text-indigo-700">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="processed" onclick="sortCopiedReportTable('processed')" title="Click to sort by Copied & Processed" class="p-3.5 text-right text-emerald-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Copied &amp; Processed</span>
+                                            <span class="sort-indicator text-[11px] text-emerald-400 group-hover:text-emerald-700">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="unprocessed" onclick="sortCopiedReportTable('unprocessed')" title="Click to sort by Copied & Not Processed" class="p-3.5 text-right text-amber-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Copied &amp; Not Processed</span>
+                                            <span class="sort-indicator text-[11px] text-amber-400 group-hover:text-amber-700">↕</span>
+                                        </div>
+                                    </th>
+                                    <th data-sort="timestamp" onclick="sortCopiedReportTable('timestamp')" title="Click to sort by Timestamp" class="p-3.5 text-right text-slate-700 cursor-pointer select-none hover:bg-slate-200/70 transition-colors group">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Timestamp</span>
+                                            <span class="sort-indicator text-[11px] text-slate-400 group-hover:text-slate-600">↕</span>
+                                        </div>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody id="copiedReportTableBody" class="divide-y divide-slate-100 text-sm">
