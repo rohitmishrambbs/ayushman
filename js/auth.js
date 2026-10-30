@@ -143,11 +143,18 @@ function logoutPortalUser() {
     localStorage.removeItem(AUTH_STORAGE_KEY);
     currentSession = null;
     currentLoadedRecords = [];
+    currentTotalCount = 0;
     cachedLeaderboard = [];
+    cachedDailyProgress = [];
+    currentDailyReportDate = '';
     currentPage = 1;
 
     document.getElementById('familyListContainer').innerHTML = '';
     document.getElementById('leaderboardTableBody').innerHTML = '';
+    const dailyTbody = document.getElementById('dailyProgressTableBody');
+    if (dailyTbody) dailyTbody.innerHTML = '';
+    const antiCheatBanner = document.getElementById('antiCheatBanner');
+    if (antiCheatBanner) antiCheatBanner.classList.add('hidden');
     document.getElementById('appShell').classList.add('hidden');
     document.getElementById('loginScreen').classList.remove('hidden');
 

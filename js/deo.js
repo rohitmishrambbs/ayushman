@@ -115,8 +115,9 @@ async function loadBlockData() {
         if (error) throw error;
 
         currentLoadedRecords = data || [];
-        renderFamilyGroups(currentLoadedRecords, count || 0);
-        updatePaginationControls(count || 0);
+        currentTotalCount = count || 0;
+        renderFamilyGroups(currentLoadedRecords, currentTotalCount);
+        updatePaginationControls(currentTotalCount);
         updateBlockSummaryBar(block);
         statusText.innerText = "✓ Synced with Cloud DB";
     } catch (err) {
@@ -289,8 +290,10 @@ async function confirmAddMember() {
         if (error) throw error;
 
         currentLoadedRecords.push(newRecord);
+        currentTotalCount = (currentTotalCount || 0) + 1;
         closeAddMemberModal();
-        renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
+        renderFamilyGroups(currentLoadedRecords, currentTotalCount);
+        updatePaginationControls(currentTotalCount);
         updateBlockSummaryBar(authBlock);
         statusText.innerText = `✓ Added ${nameInput}`;
         showToast(`Member "${nameInput}" added to Family ${newRecord.family_id}`, "success");
@@ -325,7 +328,9 @@ async function deleteExtraMember(internalMemberId, memberName) {
         if (error) throw error;
 
         currentLoadedRecords = currentLoadedRecords.filter(r => String(r.member_id) !== String(internalMemberId));
-        renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
+        currentTotalCount = Math.max(currentLoadedRecords.length, (currentTotalCount || 1) - 1);
+        renderFamilyGroups(currentLoadedRecords, currentTotalCount);
+        updatePaginationControls(currentTotalCount);
         updateBlockSummaryBar(authBlock);
         statusText.innerText = "✓ Removed Extra Member";
         showToast(`Removed member "${memberName}"`, "info");
@@ -419,7 +424,7 @@ async function saveMemberStatus(memberId, status, remark) {
         }
 
         statusText.innerText = `✓ Saved Status`;
-        renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
+        renderFamilyGroups(currentLoadedRecords, currentTotalCount || currentLoadedRecords.length);
         updateBlockSummaryBar(authBlock);
         loadGPDropdown(true);
         showToast(`Updated status: ${status}`, status === 'Approved' ? 'success' : 'info', 1800);
@@ -477,7 +482,7 @@ async function saveFamilyStatus(familyId, status, remark) {
         });
 
         statusText.innerText = `✓ Saved Family ${familyId}`;
-        renderFamilyGroups(currentLoadedRecords, currentLoadedRecords.length);
+        renderFamilyGroups(currentLoadedRecords, currentTotalCount || currentLoadedRecords.length);
         updateBlockSummaryBar(authBlock);
         loadGPDropdown(true);
         showToast(`Family ${familyId} marked as ${status}`, status === 'Approved' ? 'success' : 'info', 2200);

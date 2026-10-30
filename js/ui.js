@@ -49,6 +49,23 @@ function cleanStatus(raw) {
     return String(raw).trim();
 }
 
+function escapeHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function escapeJsSingleQuote(str) {
+    return String(str ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '&quot;')
+        .replace(/\r?\n/g, ' ');
+}
+
 function getBadgeHtml(statusVal) {
     if (statusVal === 'Approved') {
         return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
@@ -113,18 +130,22 @@ function renderFamilyGroups(records, totalCount) {
 
     familiesMap.forEach(fam => {
         const cleanPhone = fam.mobile_no.replace(/\D/g, '');
-        const safeBlock = fam.block_name.replace(/'/g, "\\'");
-        const safeGp = fam.gp_name.replace(/'/g, "\\'");
-        const safeMob = fam.mobile_no.replace(/'/g, "\\'");
+        const safeBlock = escapeJsSingleQuote(fam.block_name);
+        const safeGp = escapeJsSingleQuote(fam.gp_name);
+        const safeMob = escapeJsSingleQuote(fam.mobile_no);
+        const safeFamId = escapeJsSingleQuote(fam.family_id);
 
         const blockBadgeHtml = isDistrictWide
-            ? `<span class="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 border border-indigo-300 text-xs font-bold px-2.5 py-1.5 rounded-xl">Block: ${fam.block_name}</span>`
+            ? `<span class="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 border border-indigo-300 text-xs font-bold px-2.5 py-1.5 rounded-xl">Block: ${escapeHtml(fam.block_name)}</span>`
             : '';
 
         const membersHtml = fam.members.map((m, idx) => {
             const memId = String(m.member_id ?? '');
+            const safeMemId = escapeJsSingleQuote(memId);
             const isExtra = memId.startsWith('EXTRA_');
             const memName = String(m.member_name ?? 'Unknown');
+            const safeMemNameHtml = escapeHtml(memName);
+            const safeMemNameJs = escapeJsSingleQuote(memName);
             const fatherName = String(m.father_name ?? '');
             const memType = String(m.type ?? '');
             const gender = String(m.gender ?? '').toUpperCase();
@@ -143,22 +164,22 @@ function renderFamilyGroups(records, totalCount) {
             const demographicLine = isExtra
                 ? `<p class="text-xs text-indigo-600 font-medium pl-6">Added from PM-JAY Portal &bull; Member ID: <span class="italic text-slate-400">Blank</span></p>`
                 : `<p class="text-xs text-slate-500 pl-6 flex flex-wrap items-center gap-1.5 mt-0.5">
-                    <span>Father/Spouse: <strong class="font-semibold text-slate-800">${fatherName || 'N/A'}</strong></span>
+                    <span>Father/Spouse: <strong class="font-semibold text-slate-800">${escapeHtml(fatherName || 'N/A')}</strong></span>
                     <span>&bull;</span>
-                    <span>DOB: <span class="text-slate-700 font-medium">${dob || 'N/A'}</span></span>
+                    <span>DOB: <span class="text-slate-700 font-medium">${escapeHtml(dob || 'N/A')}</span></span>
                     <span>&bull;</span>
-                    <span class="font-mono text-[11px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">ID: ${memId}</span>
+                    <span class="font-mono text-[11px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">ID: ${escapeHtml(memId)}</span>
                    </p>`;
 
             const titleFormatted = isExtra
-                ? `<span class="font-bold text-slate-900 text-sm">${memName}</span>
+                ? `<span class="font-bold text-slate-900 text-sm">${safeMemNameHtml}</span>
                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-1">✨ Added Member</span>`
-                : `<span class="font-bold text-slate-900 text-sm">${memName}</span>
-                   <span class="text-xs text-slate-500">${genderIcon} ${birthYear ? `(${birthYear})` : ''}</span>
-                   <span class="text-[11px] font-bold px-2 py-0.5 rounded-md ${isWorker ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 'bg-slate-100 text-slate-700 border border-slate-200'}">${memType || 'Member'}</span>`;
+                : `<span class="font-bold text-slate-900 text-sm">${safeMemNameHtml}</span>
+                   <span class="text-xs text-slate-500">${genderIcon} ${birthYear ? `(${escapeHtml(birthYear)})` : ''}</span>
+                   <span class="text-[11px] font-bold px-2 py-0.5 rounded-md ${isWorker ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 'bg-slate-100 text-slate-700 border border-slate-200'}">${escapeHtml(memType || 'Member')}</span>`;
 
             const deleteBtnHtml = isExtra
-                ? `<button onclick="deleteExtraMember('${memId}', '${memName.replace(/'/g, "\\'")}')" title="Remove mistakenly added member" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 transition ml-1 cursor-pointer">🗑️ Delete</button>`
+                ? `<button onclick="deleteExtraMember('${safeMemId}', '${safeMemNameJs}')" title="Remove mistakenly added member" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 transition ml-1 cursor-pointer">🗑️ Delete</button>`
                 : '';
 
             // Border color depending on status
@@ -177,15 +198,15 @@ function renderFamilyGroups(records, totalCount) {
                             ${getBadgeHtml(statusVal)}
                         </div>
                         ${demographicLine}
-                        ${remark ? `<div class="pl-6 mt-1"><span class="inline-flex items-center gap-1 text-xs text-rose-700 font-bold bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">↳ Reason: ${remark}</span></div>` : ''}
+                        ${remark ? `<div class="pl-6 mt-1"><span class="inline-flex items-center gap-1 text-xs text-rose-700 font-bold bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">↳ Reason: ${escapeHtml(remark)}</span></div>` : ''}
                     </div>
 
                     <div class="flex flex-wrap items-center gap-1.5 self-end lg:self-center shrink-0">
-                        <button onclick="toggleMemberStatus('${memId}', 'Approved')" class="px-2.5 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${statusVal === 'Approved' ? 'bg-emerald-600 text-white border-emerald-700 status-btn-active-approved' : 'bg-white hover:bg-emerald-50 text-emerald-700 border-slate-300'}">✓ Approved</button>
-                        <button onclick="toggleMemberStatus('${memId}', 'Portal Pending')" class="px-2.5 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${statusVal === 'Portal Pending' ? 'bg-amber-500 text-white border-amber-600 status-btn-active-pending' : 'bg-white hover:bg-amber-50 text-amber-700 border-slate-300'}">⏳ Pending</button>
-                        <button onclick="toggleMemberStatus('${memId}', 'Not Applied')" class="px-2.5 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${statusVal === 'Not Applied' ? 'bg-slate-700 text-white border-slate-800 status-btn-active-not-applied' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}">⚪ Not Applied</button>
-                        <button onclick="toggleMemberStatus('${memId}', 'No Record Found')" class="px-2.5 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${statusVal === 'No Record Found' ? 'bg-purple-600 text-white border-purple-700 status-btn-active-no-record' : 'bg-white hover:bg-purple-50 text-purple-700 border-slate-300'}">❓ No Record</button>
-                        <button onclick="handleNotTraceableClick('member', '${memId}', '${statusVal}')" class="px-2.5 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${statusVal === 'Not Traceable' ? 'bg-rose-600 text-white border-rose-700 status-btn-active-not-traceable' : 'bg-white hover:bg-rose-50 text-rose-700 border-slate-300'}">✕ Not Traceable</button>
+                        <button onclick="toggleMemberStatus('${safeMemId}', 'Approved')" class="px-2.5 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${statusVal === 'Approved' ? 'bg-emerald-600 text-white border-emerald-700 status-btn-active-approved' : 'bg-white hover:bg-emerald-50 text-emerald-700 border-slate-300'}">✓ Approved</button>
+                        <button onclick="toggleMemberStatus('${safeMemId}', 'Portal Pending')" class="px-2.5 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${statusVal === 'Portal Pending' ? 'bg-amber-500 text-white border-amber-600 status-btn-active-pending' : 'bg-white hover:bg-amber-50 text-amber-700 border-slate-300'}">⏳ Pending</button>
+                        <button onclick="toggleMemberStatus('${safeMemId}', 'Not Applied')" class="px-2.5 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${statusVal === 'Not Applied' ? 'bg-slate-700 text-white border-slate-800 status-btn-active-not-applied' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}">⚪ Not Applied</button>
+                        <button onclick="toggleMemberStatus('${safeMemId}', 'No Record Found')" class="px-2.5 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${statusVal === 'No Record Found' ? 'bg-purple-600 text-white border-purple-700 status-btn-active-no-record' : 'bg-white hover:bg-purple-50 text-purple-700 border-slate-300'}">❓ No Record</button>
+                        <button onclick="handleNotTraceableClick('member', '${safeMemId}', '${escapeJsSingleQuote(statusVal)}')" class="px-2.5 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${statusVal === 'Not Traceable' ? 'bg-rose-600 text-white border-rose-700 status-btn-active-not-traceable' : 'bg-white hover:bg-rose-50 text-rose-700 border-slate-300'}">✕ Not Traceable</button>
                         ${deleteBtnHtml}
                     </div>
                 </div>
@@ -197,16 +218,16 @@ function renderFamilyGroups(records, totalCount) {
                 <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-3">
                     <div class="flex flex-wrap items-center gap-2">
                         <!-- Copy Family ID Button -->
-                        <button onclick="copyFamilyId('${fam.family_id}', this)" title="Click to copy Family ID to clipboard" class="group flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 text-slate-800 hover:text-indigo-700 border border-slate-300 rounded-xl shadow-2xs font-mono font-bold text-xs transition cursor-pointer">
+                        <button onclick="copyFamilyId('${safeFamId}', this)" title="Click to copy Family ID to clipboard" class="group flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 text-slate-800 hover:text-indigo-700 border border-slate-300 rounded-xl shadow-2xs font-mono font-bold text-xs transition cursor-pointer">
                             <span class="group-hover:scale-110 transition-transform">📋</span>
-                            <span>Family ID: ${fam.family_id}</span>
+                            <span>Family ID: ${escapeHtml(fam.family_id)}</span>
                             <span class="text-[10px] text-slate-400 group-hover:text-indigo-500 font-sans font-normal">(Copy)</span>
                         </button>
 
                         <!-- Dial Mobile Phone -->
                         <a href="tel:${cleanPhone}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-2xs text-xs font-bold transition hover:shadow-emerald-600/30">
                             <span>📞</span>
-                            <span class="font-mono">${fam.mobile_no}</span>
+                            <span class="font-mono">${escapeHtml(fam.mobile_no)}</span>
                             <span class="text-[10px] opacity-90 font-sans font-normal">(Call)</span>
                         </a>
 
@@ -215,11 +236,11 @@ function renderFamilyGroups(records, totalCount) {
                         <!-- GP Badge -->
                         <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold px-2.5 py-1.5 rounded-xl">
                             <span>📍</span>
-                            <span>GP: ${fam.gp_name}</span>
+                            <span>GP: ${escapeHtml(fam.gp_name)}</span>
                         </span>
 
                         <!-- + Add Member Button -->
-                        <button onclick="openAddMemberModal('${fam.family_id}', '${safeBlock}', '${safeGp}', '${safeMob}')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-2xs hover:shadow-indigo-600/30 transition cursor-pointer active:scale-95">
+                        <button onclick="openAddMemberModal('${safeFamId}', '${safeBlock}', '${safeGp}', '${safeMob}')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-2xs hover:shadow-indigo-600/30 transition cursor-pointer active:scale-95">
                             <span>＋</span>
                             <span>Add Member</span>
                         </button>
@@ -228,11 +249,11 @@ function renderFamilyGroups(records, totalCount) {
                     <!-- Whole Family Action Bar -->
                     <div class="flex flex-wrap items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
                         <span class="text-[11px] font-bold text-slate-500 uppercase px-1.5">Whole Family (${fam.members.length}):</span>
-                        <button onclick="toggleFamilyStatus('${fam.family_id}', 'Approved')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-50 hover:bg-emerald-600 text-emerald-800 hover:text-white border border-emerald-300 transition cursor-pointer">Approve All</button>
-                        <button onclick="toggleFamilyStatus('${fam.family_id}', 'Portal Pending')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-50 hover:bg-amber-500 text-amber-800 hover:text-white border border-amber-300 transition cursor-pointer">Pending All</button>
-                        <button onclick="toggleFamilyStatus('${fam.family_id}', 'Not Applied')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-white hover:bg-slate-700 text-slate-700 hover:text-white border border-slate-300 transition cursor-pointer">Not Applied All</button>
-                        <button onclick="toggleFamilyStatus('${fam.family_id}', 'No Record Found')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-purple-50 hover:bg-purple-600 text-purple-800 hover:text-white border border-purple-300 transition cursor-pointer">No Record All</button>
-                        <button onclick="handleNotTraceableClick('family', '${fam.family_id}', '')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-50 hover:bg-rose-600 text-rose-800 hover:text-white border border-rose-300 transition cursor-pointer">Not Traceable All</button>
+                        <button onclick="toggleFamilyStatus('${safeFamId}', 'Approved')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-50 hover:bg-emerald-600 text-emerald-800 hover:text-white border border-emerald-300 transition cursor-pointer">Approve All</button>
+                        <button onclick="toggleFamilyStatus('${safeFamId}', 'Portal Pending')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-50 hover:bg-amber-500 text-amber-800 hover:text-white border border-amber-300 transition cursor-pointer">Pending All</button>
+                        <button onclick="toggleFamilyStatus('${safeFamId}', 'Not Applied')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-white hover:bg-slate-700 text-slate-700 hover:text-white border border-slate-300 transition cursor-pointer">Not Applied All</button>
+                        <button onclick="toggleFamilyStatus('${safeFamId}', 'No Record Found')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-purple-50 hover:bg-purple-600 text-purple-800 hover:text-white border border-purple-300 transition cursor-pointer">No Record All</button>
+                        <button onclick="handleNotTraceableClick('family', '${safeFamId}', '')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-50 hover:bg-rose-600 text-rose-800 hover:text-white border border-rose-300 transition cursor-pointer">Not Traceable All</button>
                     </div>
                 </div>
 

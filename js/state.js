@@ -6,6 +6,7 @@
 
 let currentSession = null;
 let currentLoadedRecords = [];
+let currentTotalCount = 0;
 let cachedLeaderboard = [];
 let cachedDailyProgress = [];
 let currentDailyReportDate = '';

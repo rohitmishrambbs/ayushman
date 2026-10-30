@@ -251,6 +251,13 @@ async function loadDailyProgressReport() {
     }
 
     try {
+        if (!cachedLeaderboard || cachedLeaderboard.length === 0) {
+            const lbRes = await supabaseClient.rpc('get_block_leaderboard');
+            if (!lbRes.error && lbRes.data) {
+                cachedLeaderboard = lbRes.data;
+            }
+        }
+
         const startIso = new Date(`${fromDate}T00:00:00.000+05:30`).toISOString();
         const endIso = new Date(`${toDate}T23:59:59.999+05:30`).toISOString();
 
@@ -554,18 +561,31 @@ async function checkSpeedAnomalies() {
     try {
         if (velocityBtn) velocityBtn.classList.add('opacity-75');
         const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const { data, error } = await supabaseClient
-            .from('bocw_members')
-            .select('block_name, family_id, STATUS, updated_at')
-            .neq('STATUS', 'Not Applied')
-            .gte('updated_at', since)
-            .order('updated_at', { ascending: false })
-            .limit(1000);
 
-        if (error) throw error;
+        const recentRows = [];
+        const chunkSize = 1000;
+        let offset = 0;
+
+        while (true) {
+            const { data, error } = await supabaseClient
+                .from('bocw_members')
+                .select('block_name, family_id, STATUS, updated_at')
+                .neq('STATUS', 'Not Applied')
+                .gte('updated_at', since)
+                .order('updated_at', { ascending: false })
+                .order('member_id', { ascending: true })
+                .range(offset, offset + chunkSize - 1);
+
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+
+            recentRows.push(...data);
+            if (data.length < chunkSize) break;
+            offset += chunkSize;
+        }
 
         const minuteBuckets = {};
-        (data || []).forEach(r => {
+        recentRows.forEach(r => {
             if (!r.updated_at) return;
             const minKey = `${r.block_name}__${r.updated_at.substring(0, 16)}`;
             if (!minuteBuckets[minKey]) minuteBuckets[minKey] = new Set();

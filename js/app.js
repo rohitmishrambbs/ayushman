@@ -32,14 +32,18 @@ async function initializeAuthenticatedApp() {
         document.getElementById('roleSelector').value = 'admin';
         document.getElementById('deoView').classList.add('hidden');
         document.getElementById('adminView').classList.remove('hidden');
-        await loadAdminLeaderboard();
-        await loadGPDropdown();
-        await loadBlockData();
+        await Promise.all([
+            loadAdminLeaderboard(),
+            loadGPDropdown(),
+            loadBlockData()
+        ]);
     } else {
         document.getElementById('deoView').classList.remove('hidden');
         document.getElementById('adminView').classList.add('hidden');
-        await loadGPDropdown();
-        await loadBlockData();
+        await Promise.all([
+            loadGPDropdown(),
+            loadBlockData()
+        ]);
     }
 }
 
@@ -70,8 +74,10 @@ async function onBlockChange() {
     if (clearBtn) clearBtn.classList.add('hidden');
 
     currentPage = 1;
-    await loadGPDropdown();
-    await loadBlockData();
+    await Promise.all([
+        loadGPDropdown(),
+        loadBlockData()
+    ]);
 }
 
 function resetPageAndLoad() {
