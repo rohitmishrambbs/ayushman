@@ -10,6 +10,7 @@
 let leaderboardSortState = { col: null, asc: false };
 let dailyProgressSortState = { col: null, asc: false };
 let copiedReportSortState = { col: null, asc: false };
+let districtProgressMode = 'all';
 
 function updateSortIcons(tableId, sortState) {
     const table = document.getElementById(tableId);
@@ -28,6 +29,62 @@ function updateSortIcons(tableId, sortState) {
     });
 }
 
+function updateDistrictProgressModeButtons() {
+    const btnAll = document.getElementById('progressModeBtnAll');
+    const btnToday = document.getElementById('progressModeBtnToday');
+    const btnYesterday = document.getElementById('progressModeBtnYesterday');
+
+    const activeCls = "px-2.5 py-1.5 bg-indigo-600 text-white border border-indigo-600 rounded-lg text-xs font-bold transition cursor-pointer shadow-2xs";
+    const inactiveCls = "px-2.5 py-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-300 rounded-lg text-xs font-bold transition cursor-pointer";
+
+    const todayStr = getIstDateString(0);
+    const yesterdayStr = getIstDateString(-1);
+    const fromVal = (document.getElementById('dailyProgressFromDate') || {}).value || '';
+    const toVal = (document.getElementById('dailyProgressToDate') || {}).value || '';
+    const isSingleDay = fromVal && fromVal === toVal;
+
+    if (btnAll) {
+        btnAll.className = districtProgressMode === 'all' ? activeCls : inactiveCls;
+    }
+    if (btnToday) {
+        btnToday.className = (districtProgressMode === 'date' && isSingleDay && fromVal === todayStr) ? activeCls : inactiveCls;
+    }
+    if (btnYesterday) {
+        btnYesterday.className = (districtProgressMode === 'date' && isSingleDay && fromVal === yesterdayStr) ? activeCls : inactiveCls;
+    }
+}
+
+function setDistrictProgressMode(mode) {
+    districtProgressMode = mode === 'date' ? 'date' : 'all';
+    const lbPanel = document.getElementById('adminTabPanelLeaderboard');
+    const dailyPanel = document.getElementById('adminTabPanelDaily');
+    const viewSelect = document.getElementById('adminViewSelector');
+
+    if (viewSelect && viewSelect.value === 'leaderboard') {
+        if (districtProgressMode === 'date') {
+            if (lbPanel) lbPanel.classList.add('hidden');
+            if (dailyPanel) dailyPanel.classList.remove('hidden');
+        } else {
+            if (dailyPanel) dailyPanel.classList.add('hidden');
+            if (lbPanel) lbPanel.classList.remove('hidden');
+        }
+    }
+    updateDistrictProgressModeButtons();
+}
+
+function onDailyDateInputChange() {
+    setDistrictProgressMode('date');
+    loadDailyProgressReport();
+}
+
+function exportDistrictProgressExcel() {
+    if (districtProgressMode === 'date') {
+        exportDailyProgressExcel();
+    } else {
+        exportLeaderboardExcel();
+    }
+}
+
 function switchAdminWorkspaceTab(tab) {
     const viewSelect = document.getElementById('adminViewSelector');
     const lbPanel = document.getElementById('adminTabPanelLeaderboard');
@@ -35,11 +92,11 @@ function switchAdminWorkspaceTab(tab) {
     const filterDrawer = document.getElementById('adminFilterDrawer');
     const copiedPanel = document.getElementById('adminTabPanelCopied');
     const topCtrlLb = document.getElementById('adminTopCtrlLeaderboard');
-    const topCtrlDaily = document.getElementById('adminTopCtrlDaily');
     const topCtrlCopied = document.getElementById('adminTopCtrlCopied');
 
-    if (viewSelect && viewSelect.value !== tab) {
-        viewSelect.value = tab;
+    const normalizedTab = (tab === 'daily') ? 'leaderboard' : tab;
+    if (viewSelect && viewSelect.value !== normalizedTab) {
+        viewSelect.value = normalizedTab;
     }
 
     if (lbPanel) lbPanel.classList.add('hidden');
@@ -50,21 +107,17 @@ function switchAdminWorkspaceTab(tab) {
         topCtrlLb.classList.add('hidden');
         topCtrlLb.classList.remove('flex');
     }
-    if (topCtrlDaily) {
-        topCtrlDaily.classList.add('hidden');
-        topCtrlDaily.classList.remove('flex');
-    }
     if (topCtrlCopied) {
         topCtrlCopied.classList.add('hidden');
         topCtrlCopied.classList.remove('flex');
     }
 
     if (tab === 'daily') {
-        if (dailyPanel) dailyPanel.classList.remove('hidden');
-        if (topCtrlDaily) {
-            topCtrlDaily.classList.remove('hidden');
-            topCtrlDaily.classList.add('flex');
+        if (topCtrlLb) {
+            topCtrlLb.classList.remove('hidden');
+            topCtrlLb.classList.add('flex');
         }
+        setDailyReportDateOffset(0);
     } else if (tab === 'filter') {
         if (filterDrawer) filterDrawer.classList.remove('hidden');
         updateAdminFilterMatchCount();
@@ -76,11 +129,16 @@ function switchAdminWorkspaceTab(tab) {
         }
         loadCopiedFamilyReport();
     } else {
-        if (lbPanel) lbPanel.classList.remove('hidden');
         if (topCtrlLb) {
             topCtrlLb.classList.remove('hidden');
             topCtrlLb.classList.add('flex');
         }
+        if (districtProgressMode === 'date') {
+            if (dailyPanel) dailyPanel.classList.remove('hidden');
+        } else {
+            if (lbPanel) lbPanel.classList.remove('hidden');
+        }
+        updateDistrictProgressModeButtons();
     }
 }
 
@@ -98,7 +156,7 @@ function dismissAntiCheatBanner() {
 
 function filterLeaderboardRows(query) {
     const q = (query || '').trim().toLowerCase();
-    const rows = document.querySelectorAll('#leaderboardTableBody tr');
+    const rows = document.querySelectorAll('#leaderboardTableBody tr, #dailyProgressTableBody tr');
     rows.forEach(tr => {
         const text = tr.innerText.toLowerCase();
         if (!q || text.includes(q)) {
@@ -264,6 +322,7 @@ function setDailyReportDateOffset(offsetDays) {
     const toInput = document.getElementById('dailyProgressToDate');
     if (fromInput) fromInput.value = targetDate;
     if (toInput) toInput.value = targetDate;
+    setDistrictProgressMode('date');
     loadDailyProgressReport();
 }
 
@@ -512,6 +571,7 @@ async function loadDailyProgressReport() {
 
         renderDailyProgressRows();
         updateSortIcons('dailyProgressTable', dailyProgressSortState);
+        updateDistrictProgressModeButtons();
     } catch (err) {
         console.error("Daily progress report error:", err);
         if (tbody) {
@@ -635,6 +695,11 @@ function renderDailyProgressRows() {
         `;
         tbody.appendChild(tr);
     });
+
+    const searchInput = document.getElementById('leaderboardSearchInput');
+    if (searchInput && searchInput.value) {
+        filterLeaderboardRows(searchInput.value);
+    }
 }
 
 async function onAdminBlockFilterChange() {
