@@ -672,7 +672,8 @@ function exportCopiedFamilyReportExcel() {
         "Mobile No",
         "Total Members in Family",
         "No. of Member Processed",
-        "No. of Member Not Processed"
+        "No. of Member Not Processed",
+        "Timestamp (updated_at)"
     ];
 
     const famAoa = [famHeaders];
@@ -687,7 +688,8 @@ function exportCopiedFamilyReportExcel() {
             !isNaN(mobNum) && mobNum > 0 ? { t: 'n', v: mobNum, z: '0' } : String(f.mobile_no ?? ''),
             { t: 'n', v: f.total_members, z: '0' },
             { t: 'n', v: f.processed_members, z: '0' },
-            { t: 'n', v: f.not_processed_members, z: '0' }
+            { t: 'n', v: f.not_processed_members, z: '0' },
+            String(f.updated_at ?? '')
         ]);
     });
 
@@ -700,6 +702,7 @@ function exportCopiedFamilyReportExcel() {
         { wch: 16 },
         { wch: 22 },
         { wch: 24 },
+        { wch: 26 },
         { wch: 26 }
     ];
 

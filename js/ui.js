@@ -51,8 +51,11 @@ function cleanStatus(raw) {
 
 const COPIED_MARKER = '[COPIED]';
 
-function isRecordCopied(remark) {
-    return String(remark ?? '').includes('[COPIED');
+function isRecordCopied(remark, updatedAt, statusVal) {
+    if (updatedAt && String(updatedAt).trim() !== '') return true;
+    if (String(remark ?? '').includes('[COPIED')) return true;
+    if (statusVal && cleanStatus(statusVal) !== 'Not Applied') return true;
+    return false;
 }
 
 function cleanRemark(rawRemark) {
@@ -236,7 +239,7 @@ function renderFamilyGroups(records, totalCount) {
             `;
         }).join('');
 
-        const isFamilyCopied = fam.members.some(m => isRecordCopied(m.remark));
+        const isFamilyCopied = fam.members.some(m => isRecordCopied(m.remark, m.updated_at, m.STATUS));
         const copyBtnStyle = isFamilyCopied
             ? 'bg-indigo-50/90 hover:bg-indigo-100 text-indigo-800 border-indigo-300'
             : 'bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 text-slate-800 hover:text-indigo-700 border-slate-300';
@@ -318,18 +321,23 @@ async function copyFamilyId(famId, btnEl) {
         btnEl.classList.add('bg-indigo-50/90', 'border-indigo-300', 'text-indigo-800');
     }, 1200);
 
-    // Persist copied state to Supabase (without touching updated_at so velocity/daily stats are unaffected)
+    // Persist copied timestamp & marker to Supabase
     try {
         const authBlock = getAuthorizedBlock();
+        const nowIso = new Date().toISOString();
         const famMembers = currentLoadedRecords.filter(r => String(r.family_id) === String(famId));
         famMembers.forEach(m => {
             m.remark = buildRemarkWithCopied(m.remark, COPIED_MARKER);
+            m.updated_at = nowIso;
         });
 
         const sampleRemark = famMembers.length > 0 ? famMembers[0].remark : COPIED_MARKER;
         let updQuery = supabaseClient
             .from('bocw_members')
-            .update({ remark: sampleRemark })
+            .update({
+                remark: sampleRemark,
+                updated_at: nowIso
+            })
             .eq('family_id', String(famId));
 
         if (authBlock && (authBlock !== 'ALL' || !isMasterAdmin())) {

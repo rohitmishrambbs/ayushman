@@ -657,6 +657,24 @@ function filterCopiedReportRows(query) {
     });
 }
 
+function formatIstTimestampShort(isoStr) {
+    if (!isoStr) return '--';
+    try {
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return '--';
+        return d.toLocaleString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            day: '2-digit',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+    } catch (e) {
+        return '--';
+    }
+}
+
 async function loadCopiedFamilyReport() {
     if (!isMasterAdmin()) return;
 
@@ -666,12 +684,12 @@ async function loadCopiedFamilyReport() {
     const subtitle = document.getElementById('copiedReportSubtitle');
 
     if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400">Scanning GP-wise unique copied Family IDs for <b>${block === 'ALL' ? 'All 22 Blocks' : block}</b>...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400">Scanning GP-wise unique copied Family ID numbers from timestamp data for <b>${block === 'ALL' ? 'All 22 Blocks' : block}</b>...</td></tr>`;
     }
     if (subtitle) {
         subtitle.innerText = block === 'ALL'
-            ? 'Showing Gram Panchayats across all 22 Blocks where DEOs have copied Family IDs.'
-            : `Showing all Gram Panchayats in ${block} with unique Family IDs copied by DEO.`;
+            ? 'Showing GP-wise unique Family ID numbers derived from timestamp (updated_at) data across all 22 Blocks.'
+            : `Showing all Gram Panchayats in ${block} with unique Family ID numbers derived from timestamp (updated_at) data.`;
     }
 
     try {
@@ -682,11 +700,11 @@ async function loadCopiedFamilyReport() {
         while (true) {
             let query = supabaseClient
                 .from('bocw_members')
-                .select('block_name, gram_panchayat_name, family_id, member_id, mobile_no, STATUS, remark')
+                .select('block_name, gram_panchayat_name, family_id, member_id, mobile_no, STATUS, remark, updated_at')
                 .not('member_id', 'ilike', 'EXTRA_%');
 
             if (block === 'ALL') {
-                query = query.ilike('remark', '%[COPIED%');
+                query = query.not('updated_at', 'is', null);
             } else {
                 query = query.eq('block_name', block);
             }
@@ -703,7 +721,7 @@ async function loadCopiedFamilyReport() {
             offset += chunkSize;
         }
 
-        // Group by Block + GP -> Family ID
+        // Group by Block + GP -> Family ID using timestamp (updated_at) data
         const gpMap = new Map();
         const copiedFamilyMap = new Map();
 
@@ -720,7 +738,8 @@ async function loadCopiedFamilyReport() {
                     block_name: blk,
                     gp_name: gp,
                     all_families: new Set(),
-                    copied_families: new Map() // famId -> { hasProcessed: boolean, statuses: Set }
+                    copied_families: new Map(),
+                    latest_updated_at: null
                 });
             }
 
@@ -729,9 +748,13 @@ async function loadCopiedFamilyReport() {
 
             const statusVal = cleanStatus(r.STATUS);
             const isProcessed = statusVal !== 'Not Applied';
-            const copied = isRecordCopied(r.remark);
+            const hasTimestampOrCopy = Boolean(r.updated_at) || isRecordCopied(r.remark, r.updated_at, r.STATUS);
 
-            if (copied) {
+            if (hasTimestampOrCopy) {
+                if (r.updated_at && (!gpEntry.latest_updated_at || r.updated_at > gpEntry.latest_updated_at)) {
+                    gpEntry.latest_updated_at = r.updated_at;
+                }
+
                 if (!gpEntry.copied_families.has(famId)) {
                     gpEntry.copied_families.set(famId, {
                         family_id: famId,
@@ -741,11 +764,15 @@ async function loadCopiedFamilyReport() {
                         total_members: 0,
                         processed_members: 0,
                         not_processed_members: 0,
-                        has_processed: false
+                        has_processed: false,
+                        updated_at: r.updated_at || null
                     });
                 }
                 const famObj = gpEntry.copied_families.get(famId);
                 famObj.total_members += 1;
+                if (r.updated_at && (!famObj.updated_at || r.updated_at > famObj.updated_at)) {
+                    famObj.updated_at = r.updated_at;
+                }
                 if (isProcessed) {
                     famObj.processed_members += 1;
                     famObj.has_processed = true;
@@ -771,6 +798,7 @@ async function loadCopiedFamilyReport() {
                 copied_count: copiedFams.length,
                 copied_processed: copiedProcessed,
                 copied_unprocessed: copiedUnprocessed,
+                latest_updated_at: g.latest_updated_at,
                 copied_family_ids: copiedFams.map(f => f.family_id).sort()
             };
         }).sort((a, b) => {
@@ -814,8 +842,8 @@ async function loadCopiedFamilyReport() {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="p-10 text-center text-slate-500">
-                        <p class="font-bold text-slate-700">No copied Family IDs recorded yet for ${block === 'ALL' ? 'any block' : block}.</p>
-                        <p class="text-xs text-slate-400 mt-1">Select a specific Block from the dropdown above to see all its GPs, or click "📋 Family ID (Copy)" in the DEO Terminal.</p>
+                        <p class="font-bold text-slate-700">No timestamped Family IDs found yet for ${block === 'ALL' ? 'any block' : block}.</p>
+                        <p class="text-xs text-slate-400 mt-1">Select a Block from the dropdown above to see all its GPs.</p>
                     </td>
                 </tr>
             `;
@@ -842,16 +870,7 @@ async function loadCopiedFamilyReport() {
                 showToast(`Opened ${row.gp_name} (${row.block_name})`, 'info', 2000);
             };
 
-            const famBadgesHtml = row.copied_family_ids.length > 0
-                ? `<div class="flex flex-wrap gap-1 max-w-md">` +
-                  row.copied_family_ids.slice(0, 8).map(fid =>
-                      `<span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200 font-mono text-[11px] font-bold">${escapeHtml(fid)}</span>`
-                  ).join('') +
-                  (row.copied_family_ids.length > 8
-                      ? `<span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-mono text-[11px] font-bold">+${row.copied_family_ids.length - 8} more</span>`
-                      : '') +
-                  `</div>`
-                : `<span class="text-xs text-slate-400 italic">0 copied</span>`;
+            const timeLabel = formatIstTimestampShort(row.latest_updated_at);
 
             tr.innerHTML = `
                 <td class="p-3.5 font-bold text-slate-700 whitespace-nowrap">${idx + 1}. ${escapeHtml(row.block_name)}</td>
@@ -862,7 +881,7 @@ async function loadCopiedFamilyReport() {
                 </td>
                 <td class="p-3.5 text-right font-mono font-bold text-emerald-700">${row.copied_processed.toLocaleString()}</td>
                 <td class="p-3.5 text-right font-mono font-semibold text-amber-700">${row.copied_unprocessed.toLocaleString()}</td>
-                <td class="p-3.5">${famBadgesHtml}</td>
+                <td class="p-3.5 text-right font-mono text-xs text-slate-500">${escapeHtml(timeLabel)}</td>
             `;
             tbody.appendChild(tr);
         });
