@@ -35,8 +35,8 @@ The portal monitors a baseline target of **70,673 verified members across 17,922
 - **Standardized Field Reason Auditing**: Mandatory classification for "Not Traceable" beneficiaries:
   1. Deceased / Death (मृत्यु)
   2. Permanent Migration / Out of District (स्थायी पलायन)
-  3. Married Out of Block (विवाह पश्चात स्थानांतरण)
-  4. Unknown in GP / Wrong Mobile (ग्राम पंचायत में अज्ञात / गलत नंबर)
+  3. Unknown in GP / Wrong Mobile (ग्राम पंचायत में अज्ञात / गलत नंबर)
+  4. Mobile Not Linked to Aadhar (आधार से मोबाइल लिंक नहीं)
   5. Refused eKYC (लाभार्थी द्वारा इंकार)
   6. Disabled
   7. Existing Coverage (पूर्व से आच्छादित)
