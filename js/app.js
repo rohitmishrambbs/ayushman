@@ -34,11 +34,7 @@ async function initializeAuthenticatedApp() {
         document.getElementById('deoView').classList.add('hidden');
         document.getElementById('adminView').classList.remove('hidden');
         if (exportBtn) exportBtn.classList.add('hidden');
-        await Promise.all([
-            loadAdminLeaderboard(),
-            loadGPDropdown(),
-            loadBlockData()
-        ]);
+        await loadAdminLeaderboard();
     } else {
         document.getElementById('deoView').classList.remove('hidden');
         document.getElementById('adminView').classList.add('hidden');
@@ -61,11 +57,17 @@ function switchRole(role) {
         document.getElementById('deoView').classList.add('hidden');
         document.getElementById('adminView').classList.remove('hidden');
         if (exportBtn) exportBtn.classList.add('hidden');
-        loadAdminLeaderboard();
+        if (!cachedLeaderboard || cachedLeaderboard.length === 0) {
+            loadAdminLeaderboard();
+        }
     } else {
         document.getElementById('adminView').classList.add('hidden');
         document.getElementById('deoView').classList.remove('hidden');
         if (exportBtn) exportBtn.classList.remove('hidden');
+        if (!currentLoadedRecords || currentLoadedRecords.length === 0) {
+            loadGPDropdown();
+            loadBlockData();
+        }
     }
 }
 

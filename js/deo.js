@@ -4,7 +4,9 @@
  * ============================================================================
  */
 
-async function loadGPDropdown(preserveSelection = false) {
+const DEO_CARD_COLUMNS = 'family_id, member_id, block_name, gram_panchayat_name, member_name, father_name, type, gender, date_of_birth, birth_year, mobile_no, STATUS, remark';
+
+async function loadGPDropdown(preserveSelection = false, forceRefresh = false) {
     const block = getAuthorizedBlock();
     if (!block) return;
     const gpSelect = document.getElementById('gpSelector');
@@ -17,6 +19,13 @@ async function loadGPDropdown(preserveSelection = false) {
         return;
     }
 
+    // Reuse in-memory cache to eliminate repetitive RPC calls
+    if (!forceRefresh && gpCacheByBlock.has(block)) {
+        const cachedData = gpCacheByBlock.get(block);
+        renderGPOptions(gpSelect, block, cachedData, preserveSelection, previousValue);
+        return;
+    }
+
     if (!preserveSelection) {
         gpSelect.innerHTML = `<option value="ALL">Loading GPs for ${block}...</option>`;
     }
@@ -25,25 +34,30 @@ async function loadGPDropdown(preserveSelection = false) {
         const { data, error } = await supabaseClient.rpc('get_block_gps', { p_block: block });
         if (error) throw error;
 
-        gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats in ${block} (${data ? data.length : 0} GPs)</option>`;
-        if (data && data.length > 0) {
-            data.forEach(gp => {
-                const gpName = String(gp.gram_panchayat_name ?? '');
-                const opt = document.createElement('option');
-                opt.value = gpName;
-                opt.innerText = `${gpName} (${gp.approved_members}/${gp.total_members} Approved)`;
-                gpSelect.appendChild(opt);
-            });
-        }
-
-        if (preserveSelection && previousValue) {
-            const exists = Array.from(gpSelect.options).some(o => o.value === previousValue);
-            gpSelect.value = exists ? previousValue : 'ALL';
-        }
+        gpCacheByBlock.set(block, data || []);
+        renderGPOptions(gpSelect, block, data, preserveSelection, previousValue);
     } catch (err) {
         if (!preserveSelection) {
             gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats</option>`;
         }
+    }
+}
+
+function renderGPOptions(gpSelect, block, data, preserveSelection, previousValue) {
+    gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats in ${block} (${data ? data.length : 0} GPs)</option>`;
+    if (data && data.length > 0) {
+        data.forEach(gp => {
+            const gpName = String(gp.gram_panchayat_name ?? '');
+            const opt = document.createElement('option');
+            opt.value = gpName;
+            opt.innerText = `${gpName} (${gp.approved_members}/${gp.total_members} Approved)`;
+            gpSelect.appendChild(opt);
+        });
+    }
+
+    if (preserveSelection && previousValue) {
+        const exists = Array.from(gpSelect.options).some(o => o.value === previousValue);
+        gpSelect.value = exists ? previousValue : 'ALL';
     }
 }
 
@@ -78,9 +92,13 @@ async function loadBlockData() {
         if (statusText) statusText.innerText = "Fetching Cloud Data...";
         container.innerHTML = renderSkeletonLoader();
 
+        // Fingerprint check: only run expensive count: 'exact' when filters change
+        const currentFingerprint = `${block}__${gp}__${statusFilter}__${searchQuery}`;
+        const needsCount = (currentFingerprint !== lastFilterFingerprint) || (currentTotalCount === null);
+
         let query = supabaseClient
             .from('bocw_members')
-            .select('*', { count: 'exact' });
+            .select(DEO_CARD_COLUMNS, needsCount ? { count: 'exact' } : {});
 
         if (block !== 'ALL') {
             query = query.eq('block_name', block);
@@ -116,7 +134,11 @@ async function loadBlockData() {
         if (error) throw error;
 
         currentLoadedRecords = data || [];
-        currentTotalCount = count || 0;
+        if (needsCount) {
+            currentTotalCount = count || 0;
+            lastFilterFingerprint = currentFingerprint;
+        }
+
         renderFamilyGroups(currentLoadedRecords, currentTotalCount);
         updatePaginationControls(currentTotalCount);
         updateBlockSummaryBar(block);
@@ -137,112 +159,167 @@ function quickFilterStatus(statusVal) {
     showToast(`Filtering by: ${statusVal === 'ALL' ? 'All Statuses' : statusVal}`, 'info', 2000);
 }
 
-async function updateBlockSummaryBar(block) {
+function applyLocalStatusDelta(block, oldStatus, newStatus, delta = 1) {
+    if (!cachedLeaderboard || cachedLeaderboard.length === 0) return;
+    const cleanOld = cleanStatus(oldStatus);
+    const cleanNew = cleanStatus(newStatus);
+    if (cleanOld === cleanNew) return;
+
+    const mapStatusToField = (st) => {
+        if (st === 'Approved') return 'approved_members';
+        if (st === 'Portal Pending') return 'pending_members';
+        if (st === 'No Record Found') return 'no_record_members';
+        if (st === 'Not Traceable') return 'not_traceable_members';
+        return 'not_applied_members';
+    };
+
+    const oldField = mapStatusToField(cleanOld);
+    const newField = mapStatusToField(cleanNew);
+
+    const targetRow = cachedLeaderboard.find(r => r.block_name === block);
+    if (targetRow) {
+        targetRow[oldField] = Math.max(0, Number(targetRow[oldField] || 0) - delta);
+        targetRow[newField] = Number(targetRow[newField] || 0) + delta;
+    }
+}
+
+function applyLocalGpApprovalDelta(block, gpName, oldStatus, newStatus, delta = 1) {
+    if (!gpCacheByBlock.has(block) || !gpName) return;
+    const cleanOld = cleanStatus(oldStatus);
+    const cleanNew = cleanStatus(newStatus);
+    if (cleanOld === cleanNew) return;
+
+    const gps = gpCacheByBlock.get(block);
+    if (!Array.isArray(gps)) return;
+    const gpEntry = gps.find(g => g.gram_panchayat_name === gpName);
+    if (gpEntry) {
+        if (cleanOld === 'Approved' && cleanNew !== 'Approved') {
+            gpEntry.approved_members = Math.max(0, Number(gpEntry.approved_members || 0) - delta);
+        } else if (cleanOld !== 'Approved' && cleanNew === 'Approved') {
+            gpEntry.approved_members = Number(gpEntry.approved_members || 0) + delta;
+        }
+    }
+}
+
+async function updateBlockSummaryBar(block, forceRefresh = false) {
     const authorizedBlock = getAuthorizedBlock() || block;
     const bar = document.getElementById('blockSummaryBar');
     if (!bar) return;
 
+    // Use cached leaderboard if available to eliminate expensive full-district RPC scans
+    if (!forceRefresh && cachedLeaderboard && cachedLeaderboard.length > 0) {
+        renderSummaryBarFromLeaderboard(authorizedBlock);
+        return;
+    }
+
     try {
         const { data, error } = await supabaseClient.rpc('get_block_leaderboard');
         if (error || !data) return;
-
-        let row;
-        if (authorizedBlock === 'ALL') {
-            row = data.reduce((acc, r) => {
-                acc.total_members += Number(r.total_members || 0);
-                acc.total_families += Number(r.total_families || 0);
-                acc.approved_members += Number(r.approved_members || 0);
-                acc.pending_members += Number(r.pending_members || 0);
-                acc.not_applied_members += Number(r.not_applied_members || 0);
-                acc.unidentified_members += Number(r.unidentified_members || 0);
-                acc.no_record_members += Number(r.no_record_members || 0);
-                acc.not_traceable_members += Number(r.not_traceable_members || 0);
-                acc.extra_added_members += Number(r.extra_added_members || 0);
-                return acc;
-            }, {
-                total_members: 0,
-                total_families: 0,
-                approved_members: 0,
-                pending_members: 0,
-                not_applied_members: 0,
-                unidentified_members: 0,
-                no_record_members: 0,
-                not_traceable_members: 0,
-                extra_added_members: 0
-            });
-        } else {
-            row = data.find(r => r.block_name === authorizedBlock);
-        }
-
-        if (!row) return;
-
-        const notAppliedTotal = Number(row.not_applied_members || 0) + Number(row.unidentified_members || 0);
-        const extraTotal = Number(row.extra_added_members || 0);
-        const currentFilter = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : 'ALL';
-
-        bar.innerHTML = `
-            <div onclick="quickFilterStatus('ALL')" title="Click to show all records" class="summary-stat-box bg-slate-50 px-2.5 py-2 rounded-lg border ${currentFilter === 'ALL' ? 'ring-2 ring-slate-800 border-slate-400' : 'border-slate-200'}">
-                <div class="flex items-center justify-between">
-                    <span class="block text-slate-500 font-bold uppercase text-[9.5px]">Base Total</span>
-                    <span class="text-[11px] text-slate-400">📋</span>
-                </div>
-                <div class="mt-0.5 flex items-baseline gap-1">
-                    <span class="font-black text-slate-900 text-sm font-mono">${Number(row.total_members || 0).toLocaleString()}</span>
-                    <span class="font-normal text-[10px] text-slate-500">(${Number(row.total_families || 0).toLocaleString()} Fam)</span>
-                </div>
-            </div>
-
-            <div onclick="quickFilterStatus('Approved')" title="Click to filter Approved" class="summary-stat-box bg-emerald-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'Approved' ? 'ring-2 ring-emerald-600 border-emerald-400' : 'border-emerald-200'}">
-                <div class="flex items-center justify-between">
-                    <span class="block text-emerald-800 font-bold uppercase text-[9.5px]">Approved</span>
-                    <span class="text-[11px] text-emerald-600">✓</span>
-                </div>
-                <span class="font-black text-emerald-900 text-sm font-mono block mt-0.5">${Number(row.approved_members || 0).toLocaleString()}</span>
-            </div>
-
-            <div onclick="quickFilterStatus('Portal Pending')" title="Click to filter Portal Pending" class="summary-stat-box bg-amber-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'Portal Pending' ? 'ring-2 ring-amber-600 border-amber-400' : 'border-amber-200'}">
-                <div class="flex items-center justify-between">
-                    <span class="block text-amber-800 font-bold uppercase text-[9.5px]">Portal Pending</span>
-                    <span class="text-[11px] text-amber-600">⏳</span>
-                </div>
-                <span class="font-black text-amber-900 text-sm font-mono block mt-0.5">${Number(row.pending_members || 0).toLocaleString()}</span>
-            </div>
-
-            <div onclick="quickFilterStatus('Not Applied')" title="Click to filter Not Applied" class="summary-stat-box bg-slate-100 px-2.5 py-2 rounded-lg border ${currentFilter === 'Not Applied' ? 'ring-2 ring-slate-700 border-slate-400' : 'border-slate-300'}">
-                <div class="flex items-center justify-between">
-                    <span class="block text-slate-700 font-bold uppercase text-[9.5px]">Not Applied</span>
-                    <span class="text-[11px] text-slate-500">⚪</span>
-                </div>
-                <span class="font-black text-slate-900 text-sm font-mono block mt-0.5">${notAppliedTotal.toLocaleString()}</span>
-            </div>
-
-            <div onclick="quickFilterStatus('No Record Found')" title="Click to filter No Record Found" class="summary-stat-box bg-purple-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'No Record Found' ? 'ring-2 ring-purple-600 border-purple-400' : 'border-purple-200'}">
-                <div class="flex items-center justify-between">
-                    <span class="block text-purple-800 font-bold uppercase text-[9.5px]">No Record</span>
-                    <span class="text-[11px] text-purple-600">❓</span>
-                </div>
-                <span class="font-black text-purple-900 text-sm font-mono block mt-0.5">${Number(row.no_record_members || 0).toLocaleString()}</span>
-            </div>
-
-            <div onclick="quickFilterStatus('Not Traceable')" title="Click to filter Not Traceable" class="summary-stat-box bg-rose-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'Not Traceable' ? 'ring-2 ring-rose-600 border-rose-400' : 'border-rose-200'}">
-                <div class="flex items-center justify-between">
-                    <span class="block text-rose-800 font-bold uppercase text-[9.5px]">Not Traceable</span>
-                    <span class="text-[11px] text-rose-600">✕</span>
-                </div>
-                <span class="font-black text-rose-900 text-sm font-mono block mt-0.5">${Number(row.not_traceable_members || 0).toLocaleString()}</span>
-            </div>
-
-            <div onclick="quickFilterStatus('EXTRA_ONLY')" title="Click to filter Extra Added" class="summary-stat-box bg-indigo-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'EXTRA_ONLY' ? 'ring-2 ring-indigo-600 border-indigo-400' : 'border-indigo-200'}">
-                <div class="flex items-center justify-between">
-                    <span class="block text-indigo-800 font-bold uppercase text-[9.5px]">+ Extra Added</span>
-                    <span class="text-[11px] text-indigo-600">✨</span>
-                </div>
-                <span class="font-black text-indigo-900 text-sm font-mono block mt-0.5">+${extraTotal.toLocaleString()}</span>
-            </div>
-        `;
+        cachedLeaderboard = data;
+        renderSummaryBarFromLeaderboard(authorizedBlock);
     } catch (e) {
         console.error("Summary bar error:", e);
     }
+}
+
+function renderSummaryBarFromLeaderboard(authorizedBlock) {
+    const bar = document.getElementById('blockSummaryBar');
+    if (!bar || !cachedLeaderboard || cachedLeaderboard.length === 0) return;
+
+    let row;
+    if (authorizedBlock === 'ALL') {
+        row = cachedLeaderboard.reduce((acc, r) => {
+            acc.total_members += Number(r.total_members || 0);
+            acc.total_families += Number(r.total_families || 0);
+            acc.approved_members += Number(r.approved_members || 0);
+            acc.pending_members += Number(r.pending_members || 0);
+            acc.not_applied_members += Number(r.not_applied_members || 0);
+            acc.unidentified_members += Number(r.unidentified_members || 0);
+            acc.no_record_members += Number(r.no_record_members || 0);
+            acc.not_traceable_members += Number(r.not_traceable_members || 0);
+            acc.extra_added_members += Number(r.extra_added_members || 0);
+            return acc;
+        }, {
+            total_members: 0,
+            total_families: 0,
+            approved_members: 0,
+            pending_members: 0,
+            not_applied_members: 0,
+            unidentified_members: 0,
+            no_record_members: 0,
+            not_traceable_members: 0,
+            extra_added_members: 0
+        });
+    } else {
+        row = cachedLeaderboard.find(r => r.block_name === authorizedBlock);
+    }
+
+    if (!row) return;
+
+    const notAppliedTotal = Number(row.not_applied_members || 0) + Number(row.unidentified_members || 0);
+    const extraTotal = Number(row.extra_added_members || 0);
+    const currentFilter = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : 'ALL';
+
+    bar.innerHTML = `
+        <div onclick="quickFilterStatus('ALL')" title="Click to show all records" class="summary-stat-box bg-slate-50 px-2.5 py-2 rounded-lg border ${currentFilter === 'ALL' ? 'ring-2 ring-slate-800 border-slate-400' : 'border-slate-200'}">
+            <div class="flex items-center justify-between">
+                <span class="block text-slate-500 font-bold uppercase text-[9.5px]">Base Total</span>
+                <span class="text-[11px] text-slate-400">📋</span>
+            </div>
+            <div class="mt-0.5 flex items-baseline gap-1">
+                <span class="font-black text-slate-900 text-sm font-mono">${Number(row.total_members || 0).toLocaleString()}</span>
+                <span class="font-normal text-[10px] text-slate-500">(${Number(row.total_families || 0).toLocaleString()} Fam)</span>
+            </div>
+        </div>
+
+        <div onclick="quickFilterStatus('Approved')" title="Click to filter Approved" class="summary-stat-box bg-emerald-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'Approved' ? 'ring-2 ring-emerald-600 border-emerald-400' : 'border-emerald-200'}">
+            <div class="flex items-center justify-between">
+                <span class="block text-emerald-800 font-bold uppercase text-[9.5px]">Approved</span>
+                <span class="text-[11px] text-emerald-600">✓</span>
+            </div>
+            <span class="font-black text-emerald-900 text-sm font-mono block mt-0.5">${Number(row.approved_members || 0).toLocaleString()}</span>
+        </div>
+
+        <div onclick="quickFilterStatus('Portal Pending')" title="Click to filter Portal Pending" class="summary-stat-box bg-amber-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'Portal Pending' ? 'ring-2 ring-amber-600 border-amber-400' : 'border-amber-200'}">
+            <div class="flex items-center justify-between">
+                <span class="block text-amber-800 font-bold uppercase text-[9.5px]">Portal Pending</span>
+                <span class="text-[11px] text-amber-600">⏳</span>
+            </div>
+            <span class="font-black text-amber-900 text-sm font-mono block mt-0.5">${Number(row.pending_members || 0).toLocaleString()}</span>
+        </div>
+
+        <div onclick="quickFilterStatus('Not Applied')" title="Click to filter Not Applied" class="summary-stat-box bg-slate-100 px-2.5 py-2 rounded-lg border ${currentFilter === 'Not Applied' ? 'ring-2 ring-slate-700 border-slate-400' : 'border-slate-300'}">
+            <div class="flex items-center justify-between">
+                <span class="block text-slate-700 font-bold uppercase text-[9.5px]">Not Applied</span>
+                <span class="text-[11px] text-slate-500">⚪</span>
+            </div>
+            <span class="font-black text-slate-900 text-sm font-mono block mt-0.5">${notAppliedTotal.toLocaleString()}</span>
+        </div>
+
+        <div onclick="quickFilterStatus('No Record Found')" title="Click to filter No Record Found" class="summary-stat-box bg-purple-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'No Record Found' ? 'ring-2 ring-purple-600 border-purple-400' : 'border-purple-200'}">
+            <div class="flex items-center justify-between">
+                <span class="block text-purple-800 font-bold uppercase text-[9.5px]">No Record</span>
+                <span class="text-[11px] text-purple-600">❓</span>
+            </div>
+            <span class="font-black text-purple-900 text-sm font-mono block mt-0.5">${Number(row.no_record_members || 0).toLocaleString()}</span>
+        </div>
+
+        <div onclick="quickFilterStatus('Not Traceable')" title="Click to filter Not Traceable" class="summary-stat-box bg-rose-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'Not Traceable' ? 'ring-2 ring-rose-600 border-rose-400' : 'border-rose-200'}">
+            <div class="flex items-center justify-between">
+                <span class="block text-rose-800 font-bold uppercase text-[9.5px]">Not Traceable</span>
+                <span class="text-[11px] text-rose-600">✕</span>
+            </div>
+            <span class="font-black text-rose-900 text-sm font-mono block mt-0.5">${Number(row.not_traceable_members || 0).toLocaleString()}</span>
+        </div>
+
+        <div onclick="quickFilterStatus('EXTRA_ONLY')" title="Click to filter Extra Added" class="summary-stat-box bg-indigo-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'EXTRA_ONLY' ? 'ring-2 ring-indigo-600 border-indigo-400' : 'border-indigo-200'}">
+            <div class="flex items-center justify-between">
+                <span class="block text-indigo-800 font-bold uppercase text-[9.5px]">+ Extra Added</span>
+                <span class="text-[11px] text-indigo-600">✨</span>
+            </div>
+            <span class="font-black text-indigo-900 text-sm font-mono block mt-0.5">+${extraTotal.toLocaleString()}</span>
+        </div>
+    `;
 }
 
 async function confirmAddMember() {
@@ -295,7 +372,17 @@ async function confirmAddMember() {
         closeAddMemberModal();
         renderFamilyGroups(currentLoadedRecords, currentTotalCount);
         updatePaginationControls(currentTotalCount);
-        updateBlockSummaryBar(authBlock);
+
+        // Optimistic local update for extra member
+        if (cachedLeaderboard) {
+            const blkRow = cachedLeaderboard.find(r => r.block_name === targetBlock);
+            if (blkRow) {
+                blkRow.extra_added_members = Number(blkRow.extra_added_members || 0) + 1;
+                const field = statusInput === 'Approved' ? 'approved_members' : (statusInput === 'Portal Pending' ? 'pending_members' : 'not_applied_members');
+                blkRow[field] = Number(blkRow[field] || 0) + 1;
+            }
+        }
+        renderSummaryBarFromLeaderboard(authBlock);
         statusText.innerText = `✓ Added ${nameInput}`;
         showToast(`Member "${nameInput}" added to Family ${newRecord.family_id}`, "success");
     } catch (err) {
@@ -332,7 +419,7 @@ async function deleteExtraMember(internalMemberId, memberName) {
         currentTotalCount = Math.max(currentLoadedRecords.length, (currentTotalCount || 1) - 1);
         renderFamilyGroups(currentLoadedRecords, currentTotalCount);
         updatePaginationControls(currentTotalCount);
-        updateBlockSummaryBar(authBlock);
+        renderSummaryBarFromLeaderboard(authBlock);
         statusText.innerText = "✓ Removed Extra Member";
         showToast(`Removed member "${memberName}"`, "info");
     } catch (err) {
@@ -421,15 +508,23 @@ async function saveMemberStatus(memberId, status, remark) {
             if (fallback.error) throw fallback.error;
         }
 
+        const oldStatus = rec ? cleanStatus(rec.STATUS) : 'Not Applied';
+        const gpName = rec ? rec.gram_panchayat_name : '';
+        const recBlock = rec ? (rec.block_name || authBlock) : authBlock;
+
         if (rec) {
             rec.STATUS = status;
             rec.remark = finalRemark;
         }
 
+        // Optimistic in-memory counter updates (0 database round-trips)
+        applyLocalStatusDelta(recBlock, oldStatus, status, 1);
+        applyLocalGpApprovalDelta(recBlock, gpName, oldStatus, status, 1);
+
         statusText.innerText = `✓ Saved Status`;
         renderFamilyGroups(currentLoadedRecords, currentTotalCount || currentLoadedRecords.length);
-        updateBlockSummaryBar(authBlock);
-        loadGPDropdown(true);
+        renderSummaryBarFromLeaderboard(authBlock);
+        loadGPDropdown(true, false);
         showToast(`Updated status: ${status}`, status === 'Approved' ? 'success' : 'info', 1800);
     } catch (err) {
         showToast(`Failed to save status: ${err.message}`, "error");
@@ -482,17 +577,21 @@ async function saveFamilyStatus(familyId, status, remark) {
             if (fallback.error) throw fallback.error;
         }
 
-        currentLoadedRecords.forEach(r => {
-            if (String(r.family_id) === String(familyId)) {
-                r.STATUS = status;
-                r.remark = finalRemark;
-            }
+        const famMembers = currentLoadedRecords.filter(r => String(r.family_id) === String(familyId));
+        famMembers.forEach(m => {
+            const oldStatus = cleanStatus(m.STATUS);
+            const mBlock = m.block_name || authBlock;
+            const mGp = m.gram_panchayat_name || '';
+            applyLocalStatusDelta(mBlock, oldStatus, status, 1);
+            applyLocalGpApprovalDelta(mBlock, mGp, oldStatus, status, 1);
+            m.STATUS = status;
+            m.remark = finalRemark;
         });
 
         statusText.innerText = `✓ Saved Family ${familyId}`;
         renderFamilyGroups(currentLoadedRecords, currentTotalCount || currentLoadedRecords.length);
-        updateBlockSummaryBar(authBlock);
-        loadGPDropdown(true);
+        renderSummaryBarFromLeaderboard(authBlock);
+        loadGPDropdown(true, false);
         showToast(`Family ${familyId} marked as ${status}`, status === 'Approved' ? 'success' : 'info', 2200);
     } catch (err) {
         showToast(`Failed to update Family: ${err.message}`, "error");

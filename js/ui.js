@@ -324,10 +324,18 @@ async function copyFamilyId(famId, btnEl) {
         btnEl.classList.add('bg-indigo-50/90', 'border-indigo-300', 'text-indigo-800');
     }, 1200);
 
+    // Skip database write if already logged as copied
+    const strFamId = String(famId);
+    const famMembers = currentLoadedRecords.filter(r => String(r.family_id) === strFamId);
+    const alreadyCopiedInDb = famMembers.length > 0 && famMembers.every(m => isRecordCopied(m.remark));
+    if (alreadyCopiedInDb || copiedFamiliesInSession.has(strFamId)) {
+        return;
+    }
+    copiedFamiliesInSession.add(strFamId);
+
     // Persist copied state to Supabase (without touching updated_at so velocity/daily stats are unaffected)
     try {
         const authBlock = getAuthorizedBlock();
-        const famMembers = currentLoadedRecords.filter(r => String(r.family_id) === String(famId));
         famMembers.forEach(m => {
             m.remark = buildRemarkWithCopied(m.remark, COPIED_MARKER);
         });
@@ -336,7 +344,7 @@ async function copyFamilyId(famId, btnEl) {
         let updQuery = supabaseClient
             .from('bocw_members')
             .update({ remark: sampleRemark })
-            .eq('family_id', String(famId));
+            .eq('family_id', strFamId);
 
         if (authBlock && (authBlock !== 'ALL' || !isMasterAdmin())) {
             updQuery = updQuery.eq('block_name', authBlock);

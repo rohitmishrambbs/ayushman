@@ -349,8 +349,6 @@ async function loadAdminLeaderboard() {
         </tr>
     `;
 
-    updateAdminFilterMatchCount();
-
     try {
         const { data, error } = await supabaseClient.rpc('get_block_leaderboard');
         if (error) throw error;
@@ -714,11 +712,28 @@ async function onAdminBlockFilterChange() {
         return;
     }
 
+    if (gpCacheByBlock && gpCacheByBlock.has(block)) {
+        const data = gpCacheByBlock.get(block);
+        gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats in ${block} (${data ? data.length : 0} GPs)</option>`;
+        if (data && data.length > 0) {
+            data.forEach(gp => {
+                const gpName = String(gp.gram_panchayat_name ?? '');
+                const opt = document.createElement('option');
+                opt.value = gpName;
+                opt.innerText = `${gpName} (${gp.approved_members}/${gp.total_members} Approved)`;
+                gpSelect.appendChild(opt);
+            });
+        }
+        await updateAdminFilterMatchCount();
+        return;
+    }
+
     gpSelect.innerHTML = `<option value="ALL">Loading GPs for ${block}...</option>`;
     try {
         const { data, error } = await supabaseClient.rpc('get_block_gps', { p_block: block });
         if (error) throw error;
 
+        if (gpCacheByBlock) gpCacheByBlock.set(block, data || []);
         gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats in ${block} (${data ? data.length : 0} GPs)</option>`;
         if (data && data.length > 0) {
             data.forEach(gp => {
