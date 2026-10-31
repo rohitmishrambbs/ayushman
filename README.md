@@ -37,10 +37,10 @@ The portal monitors a baseline target of **70,673 verified members across 17,922
   2. Permanent Migration / Out of District (स्थायी पलायन)
   3. Married Out of Block (विवाह पश्चात स्थानांतरण)
   4. Unknown in GP / Wrong Mobile (ग्राम पंचायत में अज्ञात / गलत नंबर)
-  5. Duplicate / Card Already Made via Ration Card (राशन कार्ड से पूर्व निर्मित)
-  6. Refused eKYC (लाभार्थी द्वारा इंकार)
-  7. Disabled (दिव्यांग)
-  8. Existing Coverage (पूर्व से आच्छादित)
+  5. Refused eKYC (लाभार्थी द्वारा इंकार)
+  6. Disabled
+  7. Existing Coverage (पूर्व से आच्छादित)
+
 
 ### 3. 📊 District ACMO Command Dashboard
 - **22-Block Performance Leaderboard**: Live ranking with completion rates, progress bars, and rank medals (🥇 Gold, 🥈 Silver, 🥉 Bronze).
