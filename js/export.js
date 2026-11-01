@@ -252,8 +252,6 @@ async function exportNotAppliedGpWiseExcel() {
     const block = getAuthorizedBlock();
     if (!block) return;
 
-    const gpSelect = document.getElementById('gpSelector');
-    const selectedGp = gpSelect ? gpSelect.value : 'ALL';
     const statusText = document.getElementById('syncStatusText');
     const selectEl = document.getElementById('terminalExportSelect');
     const defaultLabel = 'Select Download';
@@ -262,165 +260,79 @@ async function exportNotAppliedGpWiseExcel() {
         isExportInProgress = true;
         if (selectEl) {
             selectEl.disabled = true;
-            if (selectEl.options[0]) selectEl.options[0].innerText = '⏳ Starting export...';
+            if (selectEl.options[0]) selectEl.options[0].innerText = '⏳ Preparing summary...';
         }
-        statusText.innerText = "Preparing GP-wise Not Applied (.xlsx)...";
-        showToast("Preparing Not Applied members GP-wise Excel export...", "info", 2000);
+        statusText.innerText = "Preparing GP-wise Not Applied summary (.xlsx)...";
+        showToast("Generating GP-wise Not Applied and Total Members report...", "info", 2000);
 
-        const filterObj = {
-            block,
-            gp: selectedGp,
-            statusFilter: 'Not Applied',
-            searchQuery: ''
-        };
+        // Fetch or use cached GP breakdown for the block
+        let gps = (gpCacheByBlock && gpCacheByBlock.has(block))
+            ? gpCacheByBlock.get(block)
+            : await fetchBlockGpsData(block);
 
-        const data = await fetchAllMatchingRecordsPaginated(
-            filterObj,
-            (fetched, total) => {
-                const pct = total > 0 ? Math.round((fetched / total) * 100) : 100;
-                statusText.innerText = `Fetching Not Applied ${fetched.toLocaleString()} / ${total.toLocaleString()} (${pct}%)...`;
-                if (selectEl && selectEl.options[0]) {
-                    selectEl.options[0].innerText = `⏳ ${pct}% (${fetched}/${total})`;
-                }
-            }
-        );
-
-        if (!data || data.length === 0) {
-            showToast("No Not Applied records found for export.", "warning");
+        if (!gps || gps.length === 0) {
+            showToast("No GP data found for this block.", "warning");
             statusText.innerText = "✓ Synced with Cloud DB";
             return;
         }
 
-        if (selectEl && selectEl.options[0]) {
-            selectEl.options[0].innerText = `⚙️ Building .xlsx (${data.length.toLocaleString()} rows)...`;
-        }
-
-        // 1. Members Detail Sheet (sorted GP-wise -> Family ID -> Member ID)
-        data.sort((a, b) => {
-            const gpCmp = String(a.gram_panchayat_name ?? '').localeCompare(String(b.gram_panchayat_name ?? ''));
-            if (gpCmp !== 0) return gpCmp;
-            const famCmp = String(a.family_id ?? '').localeCompare(String(b.family_id ?? ''));
-            if (famCmp !== 0) return famCmp;
-            return String(a.member_id ?? '').localeCompare(String(b.member_id ?? ''));
-        });
+        const sortedGps = [...gps].sort((a, b) =>
+            String(a.gram_panchayat_name ?? '').localeCompare(String(b.gram_panchayat_name ?? ''))
+        );
 
         const headers = [
-            "family_id",
-            "member_id",
-            "block_name",
-            "gram_panchayat_name",
-            "member_name",
-            "father_name",
-            "type",
-            "gender",
-            "date_of_birth",
-            "birth_year",
-            "mobile_no",
-            "STATUS",
-            "remark"
+            "S.No.",
+            "Name of Gram Panchayat",
+            "Total Members",
+            "No. of Members Not Applied"
         ];
 
-        const detailAoa = [headers];
-        const gpSummaryMap = new Map();
-
-        data.forEach(r => {
-            const rawMemId = String(r.member_id ?? '');
-            const isExtra = rawMemId.startsWith('EXTRA_');
-            const famNum = Number(String(r.family_id ?? '').replace(/\D/g, ''));
-            const memNum = isExtra ? NaN : Number(rawMemId.replace(/\D/g, ''));
-            const byNum = Number(String(r.birth_year ?? '').replace(/\D/g, ''));
-            const mobNum = Number(String(r.mobile_no ?? '').replace(/\D/g, ''));
-            const gpName = String(r.gram_panchayat_name ?? 'UNKNOWN').trim() || 'UNKNOWN';
-
-            detailAoa.push([
-                !isNaN(famNum) && famNum > 0 ? { t: 'n', v: famNum, z: '0' } : String(r.family_id ?? ''),
-                isExtra ? "" : (!isNaN(memNum) && memNum > 0 ? { t: 'n', v: memNum, z: '0' } : rawMemId),
-                String(r.block_name ?? ''),
-                gpName,
-                String(r.member_name ?? ''),
-                String(r.father_name ?? ''),
-                String(r.type ?? ''),
-                String(r.gender ?? ''),
-                String(r.date_of_birth ?? ''),
-                !isNaN(byNum) && byNum > 0 ? { t: 'n', v: byNum, z: '0' } : String(r.birth_year ?? ''),
-                !isNaN(mobNum) && mobNum > 0 ? { t: 'n', v: mobNum, z: '0' } : String(r.mobile_no ?? ''),
-                cleanStatus(r.STATUS),
-                cleanRemark(r.remark)
-            ]);
-
-            if (!gpSummaryMap.has(gpName)) {
-                gpSummaryMap.set(gpName, { count: 0, families: new Set() });
-            }
-            const gObj = gpSummaryMap.get(gpName);
-            gObj.count++;
-            if (r.family_id) gObj.families.add(String(r.family_id));
-        });
-
-        const detailWs = XLSX.utils.aoa_to_sheet(detailAoa);
-        detailWs['!cols'] = [
-            { wch: 16 }, // family_id
-            { wch: 18 }, // member_id
-            { wch: 16 }, // block_name
-            { wch: 24 }, // gram_panchayat_name
-            { wch: 22 }, // member_name
-            { wch: 22 }, // father_name
-            { wch: 14 }, // type
-            { wch: 8 },  // gender
-            { wch: 13 }, // date_of_birth
-            { wch: 11 }, // birth_year
-            { wch: 14 }, // mobile_no
-            { wch: 16 }, // STATUS
-            { wch: 32 }  // remark
-        ];
-
-        // 2. Summary Sheet
-        const sortedGps = Array.from(gpSummaryMap.keys()).sort((a, b) => a.localeCompare(b));
-        const summaryHeaders = ["S.No.", "Gram Panchayat Name", "Not Applied Members", "Total Families"];
-        const summaryAoa = [summaryHeaders];
-        let sumMembers = 0;
-        let sumFamilies = 0;
+        const aoa = [headers];
+        let sumTotalMembers = 0;
+        let sumNotApplied = 0;
 
         sortedGps.forEach((gp, idx) => {
-            const item = gpSummaryMap.get(gp);
-            sumMembers += item.count;
-            sumFamilies += item.families.size;
-            summaryAoa.push([
+            const tot = Number(gp.total_members || 0);
+            const notApp = Number(gp.not_applied_members || 0);
+            sumTotalMembers += tot;
+            sumNotApplied += notApp;
+
+            aoa.push([
                 idx + 1,
-                gp,
-                { t: 'n', v: item.count, z: '0' },
-                { t: 'n', v: item.families.size, z: '0' }
+                String(gp.gram_panchayat_name ?? ''),
+                { t: 'n', v: tot, z: '#,##0' },
+                { t: 'n', v: notApp, z: '#,##0' }
             ]);
         });
 
-        summaryAoa.push([
+        // Summary Total row
+        aoa.push([
             "",
             "TOTAL",
-            { t: 'n', v: sumMembers, z: '0' },
-            { t: 'n', v: sumFamilies, z: '0' }
+            { t: 'n', v: sumTotalMembers, z: '#,##0' },
+            { t: 'n', v: sumNotApplied, z: '#,##0' }
         ]);
 
-        const summaryWs = XLSX.utils.aoa_to_sheet(summaryAoa);
-        summaryWs['!cols'] = [
-            { wch: 8 },
-            { wch: 28 },
-            { wch: 22 },
-            { wch: 18 }
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [
+            { wch: 8 },  // S.No.
+            { wch: 32 }, // Name of Gram Panchayat
+            { wch: 18 }, // Total Members
+            { wch: 30 }  // No. of Members Not Applied
         ];
 
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, detailWs, "Not_Applied_Members");
-        XLSX.utils.book_append_sheet(wb, summaryWs, "GP_Summary");
+        XLSX.utils.book_append_sheet(wb, ws, "Not_Applied_GP_Summary");
 
         const blockLabel = block === 'ALL' ? 'District' : block.replace(/\s+/g, '_');
-        const gpLabel = selectedGp === 'ALL' ? 'GP_Wise_All' : selectedGp.replace(/\s+/g, '_');
-        const filename = `BoCW_${blockLabel}_${gpLabel}_Not_Applied_Members.xlsx`;
+        const filename = `BoCW_${blockLabel}_GP_Wise_Not_Applied_Summary.xlsx`;
 
         XLSX.writeFile(wb, filename);
 
-        statusText.innerText = `✓ Exported ${data.length.toLocaleString()} Not Applied rows`;
-        showToast(`Downloaded ${filename} (${data.length.toLocaleString()} rows)!`, "success", 3500);
+        statusText.innerText = `✓ Exported summary for ${sortedGps.length} GPs`;
+        showToast(`Downloaded ${filename} (${sortedGps.length} GPs)!`, "success", 3000);
     } catch (err) {
-        console.error("Not Applied export error:", err);
+        console.error("GP Summary export error:", err);
         showToast(`Export failed: ${err.message}`, "error");
         statusText.innerText = "Export Error";
     } finally {
