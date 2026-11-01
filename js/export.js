@@ -171,17 +171,6 @@ function generateMembersWorkbookAndDownload(data, fileName) {
     XLSX.writeFile(wb, fileName);
 }
 
-function handleTerminalExportSelect(selectEl) {
-    if (!selectEl || !selectEl.value) return;
-    const action = selectEl.value;
-    selectEl.value = "";
-    if (action === 'current_list') {
-        exportCampCallListExcel();
-    } else if (action === 'not_applied_gp') {
-        exportNotAppliedGpWiseExcel();
-    }
-}
-
 async function exportCampCallListExcel() {
     if (isExportInProgress) return;
 
@@ -192,14 +181,14 @@ async function exportCampCallListExcel() {
     const statusFilter = document.getElementById('statusFilter').value;
     const searchQuery = document.getElementById('searchInput').value.trim();
     const statusText = document.getElementById('syncStatusText');
-    const selectEl = document.getElementById('terminalExportSelect');
-    const defaultLabel = 'Select Download';
+    const btnEl = document.getElementById('exportListBtn');
+    const originalBtnHtml = btnEl ? btnEl.innerHTML : '<span>Download List (.xlsx)</span>';
 
     try {
         isExportInProgress = true;
-        if (selectEl) {
-            selectEl.disabled = true;
-            if (selectEl.options[0]) selectEl.options[0].innerText = '⏳ Starting export...';
+        if (btnEl) {
+            btnEl.disabled = true;
+            btnEl.innerText = '⏳ Starting export...';
         }
         statusText.innerText = "Preparing Excel (.xlsx)...";
         showToast("Preparing Excel file, please wait...", "info", 2000);
@@ -209,8 +198,8 @@ async function exportCampCallListExcel() {
             (fetched, total) => {
                 const pct = total > 0 ? Math.round((fetched / total) * 100) : 100;
                 statusText.innerText = `Fetching ${fetched.toLocaleString()} / ${total.toLocaleString()} (${pct}%)...`;
-                if (selectEl && selectEl.options[0]) {
-                    selectEl.options[0].innerText = `⏳ ${pct}% (${fetched}/${total})`;
+                if (btnEl) {
+                    btnEl.innerText = `⏳ ${pct}% (${fetched}/${total})`;
                 }
             }
         );
@@ -221,8 +210,8 @@ async function exportCampCallListExcel() {
             return;
         }
 
-        if (selectEl && selectEl.options[0]) {
-            selectEl.options[0].innerText = `⚙️ Building .xlsx (${data.length.toLocaleString()} rows)...`;
+        if (btnEl) {
+            btnEl.innerText = `⚙️ Building .xlsx (${data.length.toLocaleString()} rows)...`;
         }
         const blockLabel = block === 'ALL' ? 'ALL_22_BLOCKS' : block.replace(/\s+/g, '_');
         const gpLabel = gp === 'ALL' ? 'AllGPs' : gp.replace(/\s+/g, '_');
@@ -238,10 +227,9 @@ async function exportCampCallListExcel() {
         statusText.innerText = "Export Error";
     } finally {
         isExportInProgress = false;
-        if (selectEl) {
-            selectEl.disabled = false;
-            selectEl.value = "";
-            if (selectEl.options[0]) selectEl.options[0].innerText = defaultLabel;
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = originalBtnHtml;
         }
     }
 }
@@ -253,14 +241,14 @@ async function exportNotAppliedGpWiseExcel() {
     if (!block) return;
 
     const statusText = document.getElementById('syncStatusText');
-    const selectEl = document.getElementById('terminalExportSelect');
-    const defaultLabel = 'Select Download';
+    const btnEl = document.getElementById('exportSummaryBtn');
+    const originalBtnHtml = btnEl ? btnEl.innerHTML : '<span>Block Summary (.xlsx)</span>';
 
     try {
         isExportInProgress = true;
-        if (selectEl) {
-            selectEl.disabled = true;
-            if (selectEl.options[0]) selectEl.options[0].innerText = '⏳ Preparing summary...';
+        if (btnEl) {
+            btnEl.disabled = true;
+            btnEl.innerText = '⏳ Preparing summary...';
         }
         statusText.innerText = "Preparing Block Not Applied summary (.xlsx)...";
         showToast("Generating Block Not Applied and Total Members report...", "info", 2000);
@@ -337,10 +325,9 @@ async function exportNotAppliedGpWiseExcel() {
         statusText.innerText = "Export Error";
     } finally {
         isExportInProgress = false;
-        if (selectEl) {
-            selectEl.disabled = false;
-            selectEl.value = "";
-            if (selectEl.options[0]) selectEl.options[0].innerText = defaultLabel;
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = originalBtnHtml;
         }
     }
 }

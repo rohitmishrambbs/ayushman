@@ -277,17 +277,23 @@
                         <span>Supabase Live</span>
                     </div>
 
-                    <div id="terminalExportBtn" class="relative inline-flex items-center">
-                        <select
-                            id="terminalExportSelect"
-                            onchange="handleTerminalExportSelect(this)"
-                            class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl pl-3 pr-7 py-1.5 border border-emerald-500 shadow-sm hover:shadow-emerald-600/30 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer appearance-none transition"
+                    <div id="terminalExportBtn" class="flex items-center gap-2">
+                        <button
+                            id="exportSummaryBtn"
+                            onclick="exportNotAppliedGpWiseExcel()"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl border border-green-500 transition shadow-sm hover:shadow-green-600/30 active:scale-95 cursor-pointer"
+                            title="Download Block Summary of Not Applied & Total Members (.xlsx)"
                         >
-                            <option value="" selected disabled>Select Download</option>
-                            <option value="current_list" class="bg-slate-900 text-white font-semibold">Download List (.xlsx)</option>
-                            <option value="not_applied_gp" class="bg-slate-900 text-white font-semibold">Block Not Applied Summary (.xlsx)</option>
-                        </select>
-                        <span class="absolute right-2.5 pointer-events-none text-white/80 text-[10px]">▼</span>
+                            <span>Block Summary (.xlsx)</span>
+                        </button>
+                        <button
+                            id="exportListBtn"
+                            onclick="exportCampCallListExcel()"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl border border-emerald-500 transition shadow-sm hover:shadow-emerald-600/30 active:scale-95 cursor-pointer"
+                            title="Download filtered verification list (.xlsx)"
+                        >
+                            <span>Download List (.xlsx)</span>
+                        </button>
                     </div>
 
                     <button onclick="logoutPortalUser()" title="Sign out of portal" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-bold rounded-xl transition shadow-sm hover:shadow-rose-600/30 active:scale-95 cursor-pointer">
