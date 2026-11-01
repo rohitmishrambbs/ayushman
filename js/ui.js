@@ -227,8 +227,7 @@ function renderFamilyGroups(records, totalCount, coveredFamSet = null) {
             : '';
 
         const uncoveredBalloonHtml = isUncovered
-            ? `<span title="Uncovered Family • 0 Approved Members in Family" class="uncovered-balloon inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold text-white shadow-sm select-none transition-all duration-200">
-                <span class="balloon-float inline-block text-sm leading-none">🎈</span>
+            ? `<span title="Uncovered Family • 0 Approved Members in Family" class="uncovered-balloon inline-flex items-center px-3 py-1.5 rounded-full text-xs font-extrabold text-white shadow-sm select-none transition-all duration-200">
                 <span>Uncovered Family</span>
                </span>`
             : '';
@@ -364,7 +363,7 @@ function renderFamilyGroups(records, totalCount, coveredFamSet = null) {
     }
 
     if (isUncoveredFilter) {
-        countLabel.innerText = `🎈 ${displayedFamiliesCount} Uncovered Families (${displayedMembersCount} Members on Page ${currentPage})`;
+        countLabel.innerText = `${displayedFamiliesCount} Uncovered Families (${displayedMembersCount} Members on Page ${currentPage})`;
     } else {
         countLabel.innerText = `${records.length} of ${totalCount.toLocaleString()} Members (${displayedFamiliesCount} Families on Page ${currentPage})`;
     }

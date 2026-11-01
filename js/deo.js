@@ -65,14 +65,26 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
 
     // Compute per-GP status breakdown, unique family counts & latest processing date
     const gpStatsMap = new Map();
+    const blockFamiliesSet = new Set();
+    const blockApprovedFamiliesSet = new Set();
+
     if (membersRes && membersRes.data) {
         membersRes.data.forEach(r => {
+            const famId = r.family_id ? String(r.family_id) : null;
+            if (famId) blockFamiliesSet.add(famId);
+
+            const st = cleanStatus(r.STATUS);
+            if (st === 'Approved' && famId) {
+                blockApprovedFamiliesSet.add(famId);
+            }
+
             const gp = String(r.gram_panchayat_name ?? '').trim();
             if (!gp) return;
             if (!gpStatsMap.has(gp)) {
                 gpStatsMap.set(gp, {
                     total_members: 0,
                     families: new Set(),
+                    approved_families: new Set(),
                     approved_members: 0,
                     pending_members: 0,
                     not_applied_members: 0,
@@ -85,12 +97,14 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
             }
             const stObj = gpStatsMap.get(gp);
             stObj.total_members++;
-            if (r.family_id) stObj.families.add(String(r.family_id));
+            if (famId) stObj.families.add(famId);
+            if (st === 'Approved' && famId) {
+                stObj.approved_families.add(famId);
+            }
             if (String(r.member_id ?? '').startsWith('EXTRA_')) {
                 stObj.extra_added_members++;
             }
 
-            const st = cleanStatus(r.STATUS);
             const isProcessed = st !== 'Not Applied';
             if (st === 'Approved') {
                 stObj.approved_members++;
@@ -122,6 +136,7 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
         if (stObj) {
             gp.total_members = Number(gp.total_members || stObj.total_members);
             gp.total_families = stObj.families.size;
+            gp.uncovered_families = Math.max(0, stObj.families.size - stObj.approved_families.size);
             gp.approved_members = stObj.approved_members;
             gp.pending_members = stObj.pending_members;
             gp.not_applied_members = stObj.not_applied_members;
@@ -135,6 +150,7 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
             const fallbackApp = Number(gp.approved_members || 0);
             const fallbackTot = Number(gp.total_members || 0);
             gp.total_families = Number(gp.total_families || 0);
+            gp.uncovered_families = Math.max(0, gp.total_families - (fallbackApp > 0 ? 1 : 0));
             gp.approved_members = fallbackApp;
             gp.pending_members = 0;
             gp.not_applied_members = Math.max(0, fallbackTot - fallbackApp);
@@ -146,6 +162,10 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
             gp.latest_timestamp = null;
         }
     });
+
+    data.block_uncovered_families = Math.max(0, blockFamiliesSet.size - blockApprovedFamiliesSet.size);
+    data.block_total_families = blockFamiliesSet.size;
+    data.block_approved_families = blockApprovedFamiliesSet.size;
 
     if (gpCacheByBlock) gpCacheByBlock.set(block, data);
     return data;
@@ -312,7 +332,8 @@ function quickFilterStatus(statusVal) {
     if (!statusSelect) return;
     statusSelect.value = statusVal;
     resetPageAndLoad();
-    showToast(`Filtering by: ${statusVal === 'ALL' ? 'All Statuses' : statusVal}`, 'info', 2000);
+    const filterLabel = statusVal === 'ALL' ? 'All Statuses' : (statusVal === 'UNCOVERED_FAMILY' ? 'Uncovered Family' : statusVal);
+    showToast(`Filtering by: ${filterLabel}`, 'info', 2000);
 }
 
 function applyLocalStatusDelta(block, oldStatus, newStatus, delta = 1) {
@@ -470,6 +491,35 @@ function renderSummaryBarFromLeaderboard(authorizedBlock) {
     const extraTotal = Number(row.extra_added_members || 0);
     const currentFilter = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : 'ALL';
 
+    let uncoveredFamCount = 0;
+    if (authorizedBlock !== 'ALL' && selectedGp && selectedGp !== 'ALL') {
+        uncoveredFamCount = (row && row.uncovered_families !== undefined)
+            ? row.uncovered_families
+            : 0;
+    } else if (authorizedBlock !== 'ALL') {
+        const gps = gpCacheByBlock && gpCacheByBlock.get(authorizedBlock);
+        if (gps && gps.block_uncovered_families !== undefined) {
+            uncoveredFamCount = gps.block_uncovered_families;
+        } else if (Array.isArray(gps)) {
+            uncoveredFamCount = gps.reduce((sum, g) => sum + (g.uncovered_families || 0), 0);
+        } else {
+            uncoveredFamCount = row.uncovered_families || 0;
+        }
+    } else {
+        // District-Wide (ALL 22 blocks)
+        let sumUncovered = 0;
+        let hasAny = false;
+        if (gpCacheByBlock) {
+            gpCacheByBlock.forEach(gps => {
+                if (gps && gps.block_uncovered_families !== undefined) {
+                    sumUncovered += gps.block_uncovered_families;
+                    hasAny = true;
+                }
+            });
+        }
+        uncoveredFamCount = hasAny ? sumUncovered : Math.max(0, Number(row.total_families || 0) - Math.round(Number(row.approved_members || 0) / 2.3));
+    }
+
     bar.innerHTML = `
         <div onclick="quickFilterStatus('ALL')" title="Click to show all records" class="summary-stat-box bg-slate-50 px-2.5 py-2 rounded-lg border ${currentFilter === 'ALL' ? 'ring-2 ring-slate-800 border-slate-400' : 'border-slate-200'}">
             <div class="flex items-center justify-between">
@@ -528,6 +578,14 @@ function renderSummaryBarFromLeaderboard(authorizedBlock) {
                 <span class="text-[11px] text-indigo-600">✨</span>
             </div>
             <span class="font-black text-indigo-900 text-sm font-mono block mt-0.5">+${extraTotal.toLocaleString()}</span>
+        </div>
+
+        <div onclick="quickFilterStatus('UNCOVERED_FAMILY')" title="Click to filter Uncovered Families (0 Approved Members)" class="summary-stat-box bg-orange-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'UNCOVERED_FAMILY' ? 'ring-2 ring-orange-600 border-orange-400' : 'border-orange-200'}">
+            <div class="flex items-center justify-between">
+                <span class="block text-orange-800 font-bold uppercase text-[9.5px]">Uncovered Fam</span>
+                <span class="text-[11px] text-orange-600">🏠</span>
+            </div>
+            <span class="font-black text-orange-900 text-sm font-mono block mt-0.5">${Number(uncoveredFamCount || 0).toLocaleString()}</span>
         </div>
     `;
 }
