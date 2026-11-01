@@ -166,19 +166,20 @@ function getBadgeHtml(statusVal) {
     </span>`;
 }
 
-function renderFamilyGroups(records, totalCount) {
+function renderFamilyGroups(records, totalCount, coveredFamSet = null) {
     const container = document.getElementById('familyListContainer');
     const countLabel = document.getElementById('recordCount');
+    const isUncoveredFilter = (document.getElementById('statusFilter')?.value === 'UNCOVERED_FAMILY');
 
     if (!records || records.length === 0) {
         container.innerHTML = `
             <div class="p-12 text-center text-slate-500 text-sm font-semibold flex flex-col items-center justify-center gap-2">
-                <span class="text-3xl">🔍</span>
-                <p class="text-slate-700 font-bold">No matching records found</p>
-                <p class="text-xs text-slate-400 font-normal">Try adjusting your search terms or filters to find beneficiaries.</p>
+                <span class="text-3xl">${isUncoveredFilter ? '🎈' : '🔍'}</span>
+                <p class="text-slate-700 font-bold">${isUncoveredFilter ? 'No Uncovered Families Found' : 'No matching records found'}</p>
+                <p class="text-xs text-slate-400 font-normal">${isUncoveredFilter ? 'All families in this view have at least one approved member (Covered).' : 'Try adjusting your search terms or filters to find beneficiaries.'}</p>
             </div>
         `;
-        countLabel.innerText = "0 Members";
+        countLabel.innerText = isUncoveredFilter ? "0 Uncovered Families" : "0 Members";
         return;
     }
 
@@ -197,12 +198,24 @@ function renderFamilyGroups(records, totalCount) {
         familiesMap.get(famId).members.push(rec);
     });
 
-    countLabel.innerText = `${records.length} of ${totalCount.toLocaleString()} Members (${familiesMap.size} Families on Page ${currentPage})`;
-
     const isDistrictWide = getAuthorizedBlock() === 'ALL';
     const cardsHtml = [];
+    let displayedFamiliesCount = 0;
+    let displayedMembersCount = 0;
 
     familiesMap.forEach(fam => {
+        const famIdStr = String(fam.family_id ?? '');
+        const hasApproved = fam.members.some(m => cleanStatus(m.STATUS) === 'Approved') || (coveredFamSet && coveredFamSet.has(famIdStr));
+        const isUncovered = !hasApproved;
+
+        // When Uncovered Family status filter is active, show ONLY families with 0 approved members
+        if (isUncoveredFilter && !isUncovered) {
+            return;
+        }
+
+        displayedFamiliesCount++;
+        displayedMembersCount += fam.members.length;
+
         const cleanPhone = fam.mobile_no.replace(/\D/g, '');
         const safeBlock = escapeJsSingleQuote(fam.block_name);
         const safeGp = escapeJsSingleQuote(fam.gp_name);
@@ -211,6 +224,13 @@ function renderFamilyGroups(records, totalCount) {
 
         const blockBadgeHtml = isDistrictWide
             ? `<span class="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 border border-indigo-300 text-xs font-bold px-2.5 py-1.5 rounded-xl">Block: ${escapeHtml(fam.block_name)}</span>`
+            : '';
+
+        const uncoveredBalloonHtml = isUncovered
+            ? `<span title="Uncovered Family • 0 Approved Members in Family" class="uncovered-balloon inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold text-white shadow-sm select-none transition-all duration-200">
+                <span class="balloon-float inline-block text-sm leading-none">🎈</span>
+                <span>Uncovered Family</span>
+               </span>`
             : '';
 
         const membersHtml = fam.members.map((m, idx) => {
@@ -313,6 +333,8 @@ function renderFamilyGroups(records, totalCount) {
                             <span>${escapeHtml(fam.gp_name)}</span>
                         </span>
 
+                        ${uncoveredBalloonHtml}
+
                         <!-- + Add Member Button -->
                         <button onclick="openAddMemberModal('${safeFamId}', '${safeBlock}', '${safeGp}', '${safeMob}')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-2xs hover:shadow-indigo-600/30 transition cursor-pointer active:scale-95">
                             <span>＋</span>
@@ -328,6 +350,25 @@ function renderFamilyGroups(records, totalCount) {
         `;
         cardsHtml.push(cardHtml);
     });
+
+    if (displayedFamiliesCount === 0) {
+        container.innerHTML = `
+            <div class="p-12 text-center text-slate-500 text-sm font-semibold flex flex-col items-center justify-center gap-2">
+                <span class="text-4xl">${isUncoveredFilter ? '🎈' : '🔍'}</span>
+                <p class="text-slate-800 font-bold text-base">${isUncoveredFilter ? 'No Uncovered Families Found' : 'No matching records found'}</p>
+                <p class="text-xs text-slate-400 font-normal">${isUncoveredFilter ? 'All families in this view have at least one approved member (Covered).' : 'Try adjusting your search terms or filters.'}</p>
+            </div>
+        `;
+        countLabel.innerText = isUncoveredFilter ? "0 Uncovered Families" : "0 Members";
+        return;
+    }
+
+    if (isUncoveredFilter) {
+        countLabel.innerText = `🎈 ${displayedFamiliesCount} Uncovered Families (${displayedMembersCount} Members on Page ${currentPage})`;
+    } else {
+        countLabel.innerText = `${records.length} of ${totalCount.toLocaleString()} Members (${displayedFamiliesCount} Families on Page ${currentPage})`;
+    }
+
     container.innerHTML = cardsHtml.join('');
 }
 

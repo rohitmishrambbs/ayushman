@@ -777,6 +777,13 @@ async function updateAdminFilterMatchCount() {
         if (statusFilter !== 'ALL') {
             if (statusFilter === 'EXTRA_ONLY') {
                 query = query.ilike('member_id', 'EXTRA_%');
+            } else if (statusFilter === 'UNCOVERED_FAMILY') {
+                const coveredFamSet = await getCoveredFamilyIds(block, gp);
+                const coveredFamIds = Array.from(coveredFamSet);
+                query = query.neq('STATUS', 'Approved');
+                if (coveredFamIds.length > 0 && coveredFamIds.length <= 450) {
+                    query = query.not('family_id', 'in', `(${coveredFamIds.join(',')})`);
+                }
             } else if (statusFilter === 'Not Applied') {
                 query = query.or('STATUS.is.null,STATUS.eq.Not Applied,STATUS.eq.Unidentified,STATUS.eq.NULL,STATUS.eq.');
             } else {

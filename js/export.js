@@ -18,6 +18,8 @@ function applyExportFiltersToQuery(query, { block, gp, statusFilter, searchQuery
     if (statusFilter && statusFilter !== 'ALL') {
         if (statusFilter === 'EXTRA_ONLY') {
             query = query.ilike('member_id', 'EXTRA_%');
+        } else if (statusFilter === 'UNCOVERED_FAMILY') {
+            query = query.neq('STATUS', 'Approved');
         } else if (statusFilter === 'Not Applied') {
             query = query.or('STATUS.is.null,STATUS.eq.Not Applied,STATUS.eq.Unidentified,STATUS.eq.NULL,STATUS.eq.');
         } else {
@@ -99,6 +101,13 @@ async function fetchAllMatchingRecordsPaginated(filters, onProgress) {
         if (famCmp !== 0) return famCmp;
         return String(a.member_id ?? '').localeCompare(String(b.member_id ?? ''));
     });
+
+    if (filters && filters.statusFilter === 'UNCOVERED_FAMILY') {
+        const coveredFamSet = (typeof getCoveredFamilyIds === 'function')
+            ? await getCoveredFamilyIds(filters.block, filters.gp)
+            : new Set();
+        return allRows.filter(r => !coveredFamSet.has(String(r.family_id)));
+    }
 
     return allRows;
 }

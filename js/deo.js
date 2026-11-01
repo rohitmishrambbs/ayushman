@@ -6,6 +6,46 @@
 
 const DEO_CARD_COLUMNS = 'family_id, member_id, block_name, gram_panchayat_name, member_name, father_name, type, gender, date_of_birth, birth_year, mobile_no, STATUS, remark';
 
+async function getCoveredFamilyIds(block, gp) {
+    const key = `${block || 'ALL'}__${gp || 'ALL'}`;
+    if (typeof coveredFamilyIdsCache !== 'undefined' && coveredFamilyIdsCache && coveredFamilyIdsCache.has(key)) {
+        return coveredFamilyIdsCache.get(key);
+    }
+
+    try {
+        let q = supabaseClient
+            .from('bocw_members')
+            .select('family_id')
+            .eq('STATUS', 'Approved');
+
+        if (block && block !== 'ALL') {
+            q = q.eq('block_name', block);
+        }
+        if (gp && gp !== 'ALL' && block !== 'ALL') {
+            q = q.eq('gram_panchayat_name', gp);
+        }
+
+        const { data, error } = await q.limit(10000);
+        if (error || !Array.isArray(data)) {
+            return new Set();
+        }
+
+        const set = new Set();
+        data.forEach(r => {
+            if (r.family_id) set.add(String(r.family_id));
+        });
+
+        if (typeof coveredFamilyIdsCache !== 'undefined' && coveredFamilyIdsCache) {
+            coveredFamilyIdsCache.set(key, set);
+        }
+        return set;
+    } catch (e) {
+        console.warn('Error fetching covered family IDs:', e);
+        return new Set();
+    }
+}
+
+
 async function fetchBlockGpsData(block, forceRefresh = false) {
     if (!forceRefresh && gpCacheByBlock && gpCacheByBlock.has(block)) {
         return gpCacheByBlock.get(block);
@@ -212,7 +252,19 @@ async function loadBlockData() {
             query = query.eq('gram_panchayat_name', gp);
         }
 
-        if (statusFilter !== 'ALL') {
+        const isUncoveredFamilyFilter = (statusFilter === 'UNCOVERED_FAMILY');
+        let currentCoveredFamSet = null;
+
+        if (isUncoveredFamilyFilter) {
+            currentCoveredFamSet = await getCoveredFamilyIds(block, gp);
+            const coveredFamIds = Array.from(currentCoveredFamSet);
+
+            query = query.neq('STATUS', 'Approved');
+
+            if (coveredFamIds.length > 0 && coveredFamIds.length <= 450) {
+                query = query.not('family_id', 'in', `(${coveredFamIds.join(',')})`);
+            }
+        } else if (statusFilter !== 'ALL') {
             if (statusFilter === 'EXTRA_ONLY') {
                 query = query.ilike('member_id', 'EXTRA_%');
             } else if (statusFilter === 'Not Applied') {
@@ -243,7 +295,7 @@ async function loadBlockData() {
             lastFilterFingerprint = currentFingerprint;
         }
 
-        renderFamilyGroups(currentLoadedRecords, currentTotalCount);
+        renderFamilyGroups(currentLoadedRecords, currentTotalCount, currentCoveredFamSet);
         updatePaginationControls(currentTotalCount);
         updateBlockSummaryBar(block);
         statusText.innerText = "✓ Synced with Cloud DB";
@@ -760,6 +812,9 @@ async function saveMemberStatus(memberId, status, remark) {
         // Optimistic in-memory counter updates (0 database round-trips)
         applyLocalStatusDelta(recBlock, oldStatus, status, 1);
         applyLocalGpApprovalDelta(recBlock, gpName, oldStatus, status, 1);
+        if (oldStatus === 'Approved' || status === 'Approved') {
+            if (typeof coveredFamilyIdsCache !== 'undefined' && coveredFamilyIdsCache) coveredFamilyIdsCache.clear();
+        }
 
         statusText.innerText = `✓ Saved Status`;
         renderFamilyGroups(currentLoadedRecords, currentTotalCount || currentLoadedRecords.length);
@@ -827,6 +882,8 @@ async function saveFamilyStatus(familyId, status, remark) {
             m.STATUS = status;
             m.remark = finalRemark;
         });
+
+        if (typeof coveredFamilyIdsCache !== 'undefined' && coveredFamilyIdsCache) coveredFamilyIdsCache.clear();
 
         statusText.innerText = `✓ Saved Family ${familyId}`;
         renderFamilyGroups(currentLoadedRecords, currentTotalCount || currentLoadedRecords.length);

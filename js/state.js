@@ -17,3 +17,4 @@ let pendingAddFamilyContext = null; // { family_id, block_name, gp_name, mobile_
 let gpCacheByBlock = new Map();
 let lastFilterFingerprint = null;
 let copiedFamiliesInSession = new Set();
+let coveredFamilyIdsCache = new Map();
