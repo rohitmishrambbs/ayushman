@@ -247,7 +247,16 @@
                         <div class="bg-gradient-to-tr from-indigo-600 to-indigo-500 px-3 py-1.5 rounded-xl font-black text-lg tracking-wider shadow-md shadow-indigo-500/30 ring-1 ring-white/15">
                             BoCW
                         </div>
-                        <h1 class="font-bold text-base leading-tight">Azamgarh</h1>
+                        <div class="flex flex-col">
+                            <div class="flex items-center gap-1.5 text-emerald-400 text-[10px] font-bold uppercase tracking-wider leading-none mb-0.5">
+                                <span class="relative flex h-2 w-2">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                <span>Live</span>
+                            </div>
+                            <h1 class="font-bold text-base leading-tight">Azamgarh</h1>
+                        </div>
                     </div>
 
                     <!-- Mobile-only Logout button -->
@@ -267,14 +276,6 @@
 
                     <div id="loggedInUserBadge" class="flex items-center gap-1.5 bg-indigo-950/80 border border-indigo-700/60 px-3 py-1.5 rounded-xl text-indigo-300 text-xs font-bold shadow-sm">
                         <span>Authenticated</span>
-                    </div>
-
-                    <div class="hidden lg:flex items-center gap-2 bg-emerald-950/80 border border-emerald-700/60 px-3 py-1.5 rounded-xl text-emerald-400 text-xs font-semibold shadow-sm">
-                        <span class="relative flex h-2 w-2">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                        <span>Supabase Live</span>
                     </div>
 
                     <div id="terminalExportBtn" class="flex items-center gap-2">
