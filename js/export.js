@@ -262,8 +262,8 @@ async function exportNotAppliedGpWiseExcel() {
             selectEl.disabled = true;
             if (selectEl.options[0]) selectEl.options[0].innerText = '⏳ Preparing summary...';
         }
-        statusText.innerText = "Preparing GP-wise Not Applied summary (.xlsx)...";
-        showToast("Generating GP-wise Not Applied and Total Members report...", "info", 2000);
+        statusText.innerText = "Preparing Block Not Applied summary (.xlsx)...";
+        showToast("Generating Block Not Applied and Total Members report...", "info", 2000);
 
         // Fetch or use cached GP breakdown for the block
         let gps = (gpCacheByBlock && gpCacheByBlock.has(block))
@@ -325,7 +325,7 @@ async function exportNotAppliedGpWiseExcel() {
         XLSX.utils.book_append_sheet(wb, ws, "Not_Applied_GP_Summary");
 
         const blockLabel = block === 'ALL' ? 'District' : block.replace(/\s+/g, '_');
-        const filename = `BoCW_${blockLabel}_GP_Wise_Not_Applied_Summary.xlsx`;
+        const filename = `BoCW_${blockLabel}_Block_Not_Applied_Summary.xlsx`;
 
         XLSX.writeFile(wb, filename);
 
