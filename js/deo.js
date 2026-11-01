@@ -120,7 +120,7 @@ async function loadGPDropdown(preserveSelection = false, forceRefresh = false) {
     const previousValue = preserveSelection ? gpSelect.value : 'ALL';
 
     if (block === 'ALL') {
-        gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats (District-Wide)</option>`;
+        gpSelect.innerHTML = `<option value="ALL">Select Gram Panchayat</option>`;
         return;
     }
 
@@ -140,13 +140,13 @@ async function loadGPDropdown(preserveSelection = false, forceRefresh = false) {
         renderGPOptions(gpSelect, block, data, preserveSelection, previousValue);
     } catch (err) {
         if (!preserveSelection) {
-            gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats</option>`;
+            gpSelect.innerHTML = `<option value="ALL">Select Gram Panchayat</option>`;
         }
     }
 }
 
 function renderGPOptions(gpSelect, block, data, preserveSelection, previousValue) {
-    gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats in ${block} (${data ? data.length : 0} GPs)</option>`;
+    gpSelect.innerHTML = `<option value="ALL">Select Gram Panchayat</option>`;
     if (data && data.length > 0) {
         data.forEach(gp => {
             const gpName = String(gp.gram_panchayat_name ?? '');
