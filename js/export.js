@@ -29,7 +29,12 @@ function applyExportFiltersToQuery(query, { block, gp, statusFilter, searchQuery
 
     if (searchQuery && searchQuery.length > 0) {
         const q = searchQuery.replace(/[,()]/g, ' ').trim();
-        query = query.or(`member_name.ilike.%${q}%,family_id.ilike.%${q}%,member_id.ilike.%${q}%,mobile_no.ilike.%${q}%,father_name.ilike.%${q}%`);
+        const isNumericOnly = /^\d+$/.test(q);
+        if (isNumericOnly) {
+            query = query.or(`family_id.ilike.%${q}%,mobile_no.ilike.%${q}%,member_id.ilike.%${q}%`);
+        } else {
+            query = query.or(`member_name.ilike.%${q}%,father_name.ilike.%${q}%,family_id.ilike.%${q}%,mobile_no.ilike.%${q}%,member_id.ilike.%${q}%`);
+        }
     }
 
     return query;

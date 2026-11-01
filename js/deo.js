@@ -312,7 +312,13 @@ async function loadBlockData() {
 
         if (searchQuery.length > 0) {
             const q = searchQuery.replace(/[,()]/g, ' ').trim();
-            query = query.or(`member_name.ilike.%${q}%,family_id.ilike.%${q}%,member_id.ilike.%${q}%,mobile_no.ilike.%${q}%,father_name.ilike.%${q}%`);
+            const isNumericOnly = /^\d+$/.test(q);
+            if (isNumericOnly) {
+                // High-performance search for mobile numbers & family IDs without scanning string text
+                query = query.or(`family_id.ilike.%${q}%,mobile_no.ilike.%${q}%,member_id.ilike.%${q}%`);
+            } else {
+                query = query.or(`member_name.ilike.%${q}%,father_name.ilike.%${q}%,family_id.ilike.%${q}%,mobile_no.ilike.%${q}%,member_id.ilike.%${q}%`);
+            }
         }
 
         const fromIdx = (currentPage - 1) * pageSize;
@@ -408,6 +414,23 @@ function applyLocalGpApprovalDelta(block, gpName, oldStatus, newStatus, delta = 
             gpEntry.latest_timestamp = new Date().toISOString();
         } else if (newProcessed) {
             gpEntry.latest_timestamp = new Date().toISOString();
+        }
+
+        // Live uncovered families counter update
+        if (cleanOld !== 'Approved' && cleanNew === 'Approved') {
+            if (gpEntry.uncovered_families !== undefined) {
+                gpEntry.uncovered_families = Math.max(0, gpEntry.uncovered_families - delta);
+            }
+            if (gps.block_uncovered_families !== undefined) {
+                gps.block_uncovered_families = Math.max(0, gps.block_uncovered_families - delta);
+            }
+        } else if (cleanOld === 'Approved' && cleanNew !== 'Approved') {
+            if (gpEntry.uncovered_families !== undefined) {
+                gpEntry.uncovered_families = Number(gpEntry.uncovered_families || 0) + delta;
+            }
+            if (gps.block_uncovered_families !== undefined) {
+                gps.block_uncovered_families = Number(gps.block_uncovered_families || 0) + delta;
+            }
         }
 
         const gpSelect = document.getElementById('gpSelector');

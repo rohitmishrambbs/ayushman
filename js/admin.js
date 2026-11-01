@@ -388,10 +388,11 @@ async function loadAdminLeaderboard() {
         renderLeaderboardRows();
         updateSortIcons('leaderboardTable', leaderboardSortState);
 
-        await loadDailyProgressReport();
+        // Run daily progress report in background to prevent blocking leaderboard display
+        loadDailyProgressReport();
         const activeView = document.getElementById('adminViewSelector');
         if (activeView && activeView.value === 'copied') {
-            await loadCopiedFamilyReport();
+            loadCopiedFamilyReport();
         }
     } catch (err) {
         console.error("Leaderboard error:", err);
@@ -781,10 +782,16 @@ async function updateAdminFilterMatchCount() {
             } else if (statusFilter === 'UNCOVERED_FAMILY') {
                 const coveredFamSet = await getCoveredFamilyIds(block, gp);
                 const coveredFamIds = Array.from(coveredFamSet);
-                if (coveredFamIds.length > 0 && coveredFamIds.length <= 450) {
+                if (coveredFamIds.length > 0 && coveredFamIds.length <= 200) {
                     query = query.not('family_id', 'in', `(${coveredFamIds.join(',')})`);
-                } else if (coveredFamIds.length > 450) {
-                    query = query.or('STATUS.is.null,STATUS.neq.Approved');
+                } else if (coveredFamIds.length > 200) {
+                    const blockGps = gpCacheByBlock && gpCacheByBlock.get(block);
+                    const uncovIds = blockGps && blockGps.block_uncovered_family_ids;
+                    if (uncovIds && uncovIds.length > 0 && uncovIds.length <= 200) {
+                        query = query.in('family_id', uncovIds);
+                    } else {
+                        query = query.or('STATUS.is.null,STATUS.neq.Approved');
+                    }
                 }
             } else if (statusFilter === 'Not Applied') {
                 query = query.or('STATUS.is.null,STATUS.eq.Not Applied,STATUS.eq.Unidentified,STATUS.eq.NULL,STATUS.eq.');
@@ -794,7 +801,12 @@ async function updateAdminFilterMatchCount() {
         }
         if (searchQuery.length > 0) {
             const q = searchQuery.replace(/[,()]/g, ' ').trim();
-            query = query.or(`member_name.ilike.%${q}%,family_id.ilike.%${q}%,member_id.ilike.%${q}%,mobile_no.ilike.%${q}%,father_name.ilike.%${q}%`);
+            const isNumericOnly = /^\d+$/.test(q);
+            if (isNumericOnly) {
+                query = query.or(`family_id.ilike.%${q}%,mobile_no.ilike.%${q}%,member_id.ilike.%${q}%`);
+            } else {
+                query = query.or(`member_name.ilike.%${q}%,father_name.ilike.%${q}%,family_id.ilike.%${q}%,mobile_no.ilike.%${q}%,member_id.ilike.%${q}%`);
+            }
         }
 
         const { count, error } = await query;
