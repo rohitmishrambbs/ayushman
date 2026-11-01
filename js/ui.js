@@ -296,25 +296,20 @@ function renderFamilyGroups(records, totalCount) {
                 <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-3">
                     <div class="flex flex-wrap items-center gap-2">
                         <!-- Copy Family ID Button -->
-                        <button onclick="copyFamilyId('${safeFamId}', this)" title="Click to copy Family ID to clipboard" class="group flex items-center gap-1.5 px-3 py-1.5 ${copyBtnStyle} border rounded-xl shadow-2xs font-mono font-bold text-xs transition cursor-pointer">
-                            <span class="group-hover:scale-110 transition-transform">📋</span>
+                        <button onclick="copyFamilyId('${safeFamId}', this)" title="Click to copy Family ID to clipboard" class="group flex items-center px-3 py-1.5 ${copyBtnStyle} border rounded-xl shadow-2xs font-mono font-bold text-xs transition cursor-pointer">
                             <span>Family ID: ${escapeHtml(fam.family_id)}</span>
-                            <span class="text-[10px] ${isFamilyCopied ? 'text-indigo-600 font-bold' : 'text-slate-400 group-hover:text-indigo-500 font-normal'} font-sans">${copyBadgeText}</span>
                         </button>
 
                         <!-- Dial Mobile Phone -->
-                        <a href="tel:${cleanPhone}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-2xs text-xs font-bold transition hover:shadow-emerald-600/30">
-                            <span>📞</span>
+                        <a href="tel:${cleanPhone}" class="inline-flex items-center px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-2xs text-xs font-bold transition hover:shadow-emerald-600/30">
                             <span class="font-mono">${escapeHtml(fam.mobile_no)}</span>
-                            <span class="text-[10px] opacity-90 font-sans font-normal">(Call)</span>
                         </a>
 
                         ${blockBadgeHtml}
 
                         <!-- GP Badge -->
-                        <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold px-2.5 py-1.5 rounded-xl">
-                            <span>📍</span>
-                            <span>GP: ${escapeHtml(fam.gp_name)}</span>
+                        <span class="inline-flex items-center bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold px-2.5 py-1.5 rounded-xl">
+                            <span>${escapeHtml(fam.gp_name)}</span>
                         </span>
 
                         <!-- + Add Member Button -->
@@ -379,9 +374,7 @@ async function copyFamilyId(famId, btnEl) {
     showToast(`Copied Family ID: ${famId}`, 'success', 2000);
     setTimeout(() => {
         btnEl.innerHTML = `
-            <span class="group-hover:scale-110 transition-transform">📋</span>
             <span>Family ID: ${escapeHtml(famId)}</span>
-            <span class="text-[10px] text-indigo-600 font-bold font-sans">(Copied ✓)</span>
         `;
         btnEl.classList.remove('bg-emerald-50', 'border-emerald-500');
         btnEl.classList.add('bg-indigo-50/90', 'border-indigo-300', 'text-indigo-800');
