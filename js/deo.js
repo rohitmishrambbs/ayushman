@@ -6,67 +6,6 @@
 
 const DEO_CARD_COLUMNS = 'family_id, member_id, block_name, gram_panchayat_name, member_name, father_name, type, gender, date_of_birth, birth_year, mobile_no, STATUS, remark';
 
-function normalizeMobileTen(rawPhone) {
-    const digits = String(rawPhone ?? '').replace(/\D/g, '');
-    return digits.length >= 10 ? digits.slice(-10) : digits;
-}
-
-async function fetchZeroPovertyForRecords(records) {
-    if (!records || records.length === 0 || typeof zeroPovertyByPhoneCache === 'undefined') return;
-
-    const uncachedPhones = new Set();
-    records.forEach(r => {
-        const ph = normalizeMobileTen(r.mobile_no);
-        if (ph && ph.length === 10 && !zeroPovertyByPhoneCache.has(ph)) {
-            uncachedPhones.add(ph);
-        }
-    });
-
-    const phoneList = Array.from(uncachedPhones);
-    if (phoneList.length === 0) return;
-
-    // Pre-initialize cache entries as empty arrays so we don't re-fetch misses
-    phoneList.forEach(ph => zeroPovertyByPhoneCache.set(ph, []));
-
-    try {
-        let { data, error } = await supabaseClient
-            .from('zero_poverty_cdo')
-            .select('sr_no, block, gram_panchayat_name, hohh_name, mobile_no, uncovered_family')
-            .in('mobile_no', phoneList);
-
-        if (error) {
-            // Graceful fallback if database column is still Hindi
-            const fallback = await supabaseClient
-                .from('zero_poverty_cdo')
-                .select('sr_no, block, gram_panchayat_name, hohh_name, mobile_no, "अनाच्छादित_परिवार"')
-                .in('mobile_no', phoneList);
-            if (!fallback.error && Array.isArray(fallback.data)) {
-                data = fallback.data.map(r => ({
-                    ...r,
-                    uncovered_family: r.uncovered_family || r['अनाच्छादित_परिवार']
-                }));
-                error = null;
-            }
-        }
-
-        if (error || !Array.isArray(data)) return;
-
-        data.forEach(row => {
-            const ph = normalizeMobileTen(row.mobile_no);
-            if (!ph) return;
-            if (!zeroPovertyByPhoneCache.has(ph)) {
-                zeroPovertyByPhoneCache.set(ph, []);
-            }
-            zeroPovertyByPhoneCache.get(ph).push({
-                ...row,
-                uncovered_family: row.uncovered_family || row['अनाच्छादित_परिवार'] || 'Yes'
-            });
-        });
-    } catch (e) {
-        console.warn('Zero Poverty lookup warning:', e);
-    }
-}
-
 async function fetchBlockGpsData(block, forceRefresh = false) {
     if (!forceRefresh && gpCacheByBlock && gpCacheByBlock.has(block)) {
         return gpCacheByBlock.get(block);
@@ -276,8 +215,6 @@ async function loadBlockData() {
         if (statusFilter !== 'ALL') {
             if (statusFilter === 'EXTRA_ONLY') {
                 query = query.ilike('member_id', 'EXTRA_%');
-            } else if (statusFilter === 'ZERO_POVERTY') {
-                query = query.not('member_id', 'ilike', 'EXTRA_%');
             } else if (statusFilter === 'Not Applied') {
                 query = query.or('STATUS.is.null,STATUS.eq.Not Applied,STATUS.eq.Unidentified,STATUS.eq.NULL,STATUS.eq.');
             } else {
@@ -305,8 +242,6 @@ async function loadBlockData() {
             currentTotalCount = count || 0;
             lastFilterFingerprint = currentFingerprint;
         }
-
-        await fetchZeroPovertyForRecords(currentLoadedRecords);
 
         renderFamilyGroups(currentLoadedRecords, currentTotalCount);
         updatePaginationControls(currentTotalCount);

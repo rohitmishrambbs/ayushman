@@ -166,183 +166,24 @@ function getBadgeHtml(statusVal) {
     </span>`;
 }
 
-// ============================================================================
-// Zero Poverty CDO 4-Field Family Matcher (Mobile, HOHH Name, GP, Block)
-// ============================================================================
-function transliterateHindiToLatin(str) {
-    const s = String(str ?? '');
-    if (!/[\u0900-\u097F]/.test(s)) return s;
-
-    const vowels = {
-        'अ': 'A', 'आ': 'A', 'इ': 'I', 'ई': 'I', 'उ': 'U', 'ऊ': 'U',
-        'ऋ': 'RI', 'ए': 'E', 'ऐ': 'AI', 'ओ': 'O', 'औ': 'AU'
-    };
-    const consonants = {
-        'क': 'K', 'ख': 'KH', 'ग': 'G', 'घ': 'GH', 'ङ': 'N',
-        'च': 'CH', 'छ': 'CHH', 'ज': 'J', 'झ': 'JH', 'ञ': 'N',
-        'ट': 'T', 'ठ': 'TH', 'ड': 'D', 'ढ': 'DH', 'ण': 'N',
-        'त': 'T', 'थ': 'TH', 'द': 'D', 'ध': 'DH', 'न': 'N',
-        'प': 'P', 'फ': 'F', 'ब': 'B', 'भ': 'BH', 'म': 'M',
-        'य': 'Y', 'र': 'R', 'ल': 'L', 'व': 'V',
-        'श': 'SH', 'ष': 'SH', 'स': 'S', 'ह': 'H'
-    };
-    const vowelSigns = {
-        'ा': 'A', 'ि': 'I', 'ी': 'I', 'ु': 'U', 'ू': 'U',
-        'ृ': 'RI', 'े': 'E', 'ै': 'AI', 'ो': 'O', 'ौ': 'AU', '्': ''
-    };
-    const modifiers = { 'ं': 'N', 'ँ': 'N', 'ः': 'H', '़': '' };
-
-    let out = '';
-    for (let i = 0; i < s.length; i++) {
-        const ch = s[i];
-        let next = s[i + 1];
-        if (next === '़') next = s[i + 2];
-
-        if (vowels[ch]) {
-            out += vowels[ch];
-        } else if (consonants[ch]) {
-            out += consonants[ch];
-            if (next && vowelSigns[next] === undefined && (consonants[next] || vowels[next] || modifiers[next] !== undefined)) {
-                out += 'A';
-            }
-        } else if (vowelSigns[ch] !== undefined) {
-            out += vowelSigns[ch];
-        } else if (modifiers[ch] !== undefined) {
-            out += modifiers[ch];
-        } else {
-            out += ch;
-        }
-    }
-    return out;
-}
-
-function getPhoneticNameKey(raw) {
-    let s = transliterateHindiToLatin(raw).toUpperCase();
-    s = s.replace(/[^A-Z\s]/g, ' ').replace(/\s+/g, ' ').trim();
-    return s
-        .replace(/EE/g, 'I')
-        .replace(/OO/g, 'U')
-        .replace(/AA/g, 'A')
-        .replace(/AU/g, 'O')
-        .replace(/AI/g, 'E')
-        .replace(/PH/g, 'F')
-        .replace(/W/g, 'V')
-        .replace(/SH/g, 'S')
-        .replace(/CHH/g, 'CH')
-        .replace(/NP/g, 'MP')
-        .replace(/NB/g, 'MB')
-        .replace(/([A-Z])\1+/g, '$1');
-}
-
-function editDistanceAtMostOne(a, b) {
-    if (a === b) return true;
-    const lenA = a.length;
-    const lenB = b.length;
-    if (Math.abs(lenA - lenB) > 1) return false;
-    let i = 0, j = 0, edits = 0;
-    while (i < lenA && j < lenB) {
-        if (a[i] === b[j]) {
-            i++;
-            j++;
-        } else {
-            edits++;
-            if (edits > 1) return false;
-            if (lenA > lenB) i++;
-            else if (lenB > lenA) j++;
-            else { i++; j++; }
-        }
-    }
-    return true;
-}
-
-function doesHohhMatchMember(hohhRaw, memberNameRaw, fatherNameRaw) {
-    const hUpper = String(hohhRaw ?? '').trim().toUpperCase().replace(/\s+/g, ' ');
-    const mUpper = String(memberNameRaw ?? '').trim().toUpperCase().replace(/\s+/g, ' ');
-    const fUpper = String(fatherNameRaw ?? '').trim().toUpperCase().replace(/\s+/g, ' ');
-    if (!hUpper) return false;
-    if (hUpper === mUpper || hUpper === fUpper) return true;
-
-    const hKey = getPhoneticNameKey(hohhRaw);
-    const mKey = getPhoneticNameKey(memberNameRaw);
-    const fKey = getPhoneticNameKey(fatherNameRaw);
-    if (!hKey) return false;
-    if (hKey === mKey || hKey === fKey) return true;
-    if ((mKey && (mKey.includes(hKey) || hKey.includes(mKey))) || (fKey && (fKey.includes(hKey) || hKey.includes(fKey)))) {
-        return true;
-    }
-
-    const hFirst = hKey.split(' ')[0];
-    const mFirst = mKey.split(' ')[0];
-    const fFirst = fKey.split(' ')[0];
-    if (hFirst.length >= 3) {
-        if (hFirst === mFirst || hFirst === fFirst) return true;
-        if (hFirst.length >= 4 && mFirst.length >= 4 && editDistanceAtMostOne(hFirst, mFirst)) return true;
-        if (hFirst.length >= 4 && fFirst.length >= 4 && editDistanceAtMostOne(hFirst, fFirst)) return true;
-    }
-    return false;
-}
-
-function normalizeLocationToken(val) {
-    return String(val ?? '').trim().toUpperCase().replace(/\s+/g, ' ');
-}
-
-function matchZeroPovertyFamily(fam) {
-    if (!fam || typeof zeroPovertyByPhoneCache === 'undefined' || !zeroPovertyByPhoneCache) return null;
-    const digits = String(fam.mobile_no ?? '').replace(/\D/g, '');
-    const ph10 = digits.length >= 10 ? digits.slice(-10) : digits;
-    if (!ph10 || ph10.length !== 10) return null;
-
-    const candidates = zeroPovertyByPhoneCache.get(ph10);
-    if (!candidates || candidates.length === 0) return null;
-
-    const famBlock = normalizeLocationToken(fam.block_name);
-    const famGp = normalizeLocationToken(fam.gp_name);
-
-    let locationMatch = null;
-    for (let i = 0; i < candidates.length; i++) {
-        const zp = candidates[i];
-        const zpBlock = normalizeLocationToken(zp.block);
-        const zpGp = normalizeLocationToken(zp.gram_panchayat_name);
-        if (zpBlock !== famBlock || zpGp !== famGp) continue;
-
-        if (!locationMatch) locationMatch = zp;
-
-        const nameMatches = (fam.members || []).some(m =>
-            doesHohhMatchMember(zp.hohh_name, m.member_name, m.father_name)
-        );
-        if (nameMatches) {
-            return zp;
-        }
-    }
-    return locationMatch;
-}
-
 function renderFamilyGroups(records, totalCount) {
     const container = document.getElementById('familyListContainer');
     const countLabel = document.getElementById('recordCount');
-    const isZeroPovertyOnly = (document.getElementById('statusFilter')?.value === 'ZERO_POVERTY');
 
     if (!records || records.length === 0) {
         container.innerHTML = `
             <div class="p-12 text-center text-slate-500 text-sm font-semibold flex flex-col items-center justify-center gap-2">
-                <span class="text-3xl">${isZeroPovertyOnly ? '🎈' : '🔍'}</span>
-                <p class="text-slate-700 font-bold">${isZeroPovertyOnly ? 'No Zero Poverty records found' : 'No matching records found'}</p>
+                <span class="text-3xl">🔍</span>
+                <p class="text-slate-700 font-bold">No matching records found</p>
                 <p class="text-xs text-slate-400 font-normal">Try adjusting your search terms or filters to find beneficiaries.</p>
             </div>
         `;
-        countLabel.innerText = isZeroPovertyOnly ? "0 Zero Poverty Members" : "0 Members";
+        countLabel.innerText = "0 Members";
         return;
     }
 
     const familiesMap = new Map();
     records.forEach(rec => {
-        const memId = String(rec.member_id ?? '');
-        const isExtra = memId.startsWith('EXTRA_');
-        // When Zero Poverty filter is selected, show only official Zero Poverty baseline members
-        if (isZeroPovertyOnly && isExtra) {
-            return;
-        }
-
         const famId = String(rec.family_id ?? 'UNKNOWN');
         if (!familiesMap.has(famId)) {
             familiesMap.set(famId, {
@@ -356,24 +197,12 @@ function renderFamilyGroups(records, totalCount) {
         familiesMap.get(famId).members.push(rec);
     });
 
+    countLabel.innerText = `${records.length} of ${totalCount.toLocaleString()} Members (${familiesMap.size} Families on Page ${currentPage})`;
+
     const isDistrictWide = getAuthorizedBlock() === 'ALL';
     const cardsHtml = [];
-    let displayedFamiliesCount = 0;
-    let displayedMembersCount = 0;
 
     familiesMap.forEach(fam => {
-        if (!fam.members || fam.members.length === 0) return;
-
-        const zpMatch = matchZeroPovertyFamily(fam);
-
-        // When Zero Poverty status filter is active, show ONLY verified Zero Poverty families
-        if (isZeroPovertyOnly && !zpMatch) {
-            return;
-        }
-
-        displayedFamiliesCount++;
-        displayedMembersCount += fam.members.length;
-
         const cleanPhone = fam.mobile_no.replace(/\D/g, '');
         const safeBlock = escapeJsSingleQuote(fam.block_name);
         const safeGp = escapeJsSingleQuote(fam.gp_name);
@@ -382,32 +211,6 @@ function renderFamilyGroups(records, totalCount) {
 
         const blockBadgeHtml = isDistrictWide
             ? `<span class="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 border border-indigo-300 text-xs font-bold px-2.5 py-1.5 rounded-xl">Block: ${escapeHtml(fam.block_name)}</span>`
-            : '';
-
-        const uncText = zpMatch ? (zpMatch.uncovered_family || zpMatch['अनाच्छादित_परिवार'] || 'Yes') : 'Yes';
-        const isUncoveredNo = String(uncText).trim().toLowerCase() === 'no';
-        const hasAnyApproved = fam.members.some(m => cleanStatus(m.STATUS) === 'Approved');
-
-        const isYellow = hasAnyApproved || isUncoveredNo;
-        const balloonClass = isYellow
-            ? 'zero-poverty-balloon zero-poverty-balloon-yellow'
-            : 'zero-poverty-balloon';
-
-        const approvedTag = hasAnyApproved
-            ? `<span class="text-[9.5px] font-black uppercase tracking-wider bg-black/20 px-1.5 py-0.5 rounded-full">✓ Approved</span>`
-            : (isUncoveredNo ? `<span class="text-[9.5px] font-black uppercase tracking-wider bg-black/20 px-1.5 py-0.5 rounded-full">Covered</span>` : '');
-
-        const statusNote = hasAnyApproved
-            ? 'At least 1 member Approved (Covered)'
-            : (isUncoveredNo ? 'Covered Family' : 'Pending Saturation');
-
-        const zeroPovertyBalloonHtml = zpMatch
-            ? `<span title="Zero Poverty CDO Matched • HOHH: ${escapeHtml(zpMatch.hohh_name)} | ${statusNote} | GP: ${escapeHtml(zpMatch.gram_panchayat_name)} | Block: ${escapeHtml(zpMatch.block)}" class="${balloonClass} inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold text-white shadow-sm select-none transition-all duration-200">
-                <span class="balloon-float inline-block text-sm leading-none">🎈</span>
-                <span>Zero Poverty</span>
-                <span class="text-[10px] font-semibold bg-white/20 px-1.5 py-0.5 rounded-full">HOHH: ${escapeHtml(zpMatch.hohh_name)}</span>
-                ${approvedTag}
-               </span>`
             : '';
 
         const membersHtml = fam.members.map((m, idx) => {
@@ -510,8 +313,6 @@ function renderFamilyGroups(records, totalCount) {
                             <span>${escapeHtml(fam.gp_name)}</span>
                         </span>
 
-                        ${zeroPovertyBalloonHtml}
-
                         <!-- + Add Member Button -->
                         <button onclick="openAddMemberModal('${safeFamId}', '${safeBlock}', '${safeGp}', '${safeMob}')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-2xs hover:shadow-indigo-600/30 transition cursor-pointer active:scale-95">
                             <span>＋</span>
@@ -527,25 +328,6 @@ function renderFamilyGroups(records, totalCount) {
         `;
         cardsHtml.push(cardHtml);
     });
-
-    if (displayedFamiliesCount === 0) {
-        container.innerHTML = `
-            <div class="p-12 text-center text-slate-500 text-sm font-semibold flex flex-col items-center justify-center gap-2">
-                <span class="text-4xl">🎈</span>
-                <p class="text-slate-800 font-bold text-base">No Zero Poverty Families Found</p>
-                <p class="text-xs text-slate-400 font-normal">No families matching the Zero Poverty CDO dataset were found for the selected filters.</p>
-            </div>
-        `;
-        countLabel.innerText = "0 Zero Poverty Families";
-        return;
-    }
-
-    if (isZeroPovertyOnly) {
-        countLabel.innerText = `🎈 ${displayedFamiliesCount} Zero Poverty Families (${displayedMembersCount} Members on Page ${currentPage})`;
-    } else {
-        countLabel.innerText = `${records.length} of ${totalCount.toLocaleString()} Members (${displayedFamiliesCount} Families on Page ${currentPage})`;
-    }
-
     container.innerHTML = cardsHtml.join('');
 }
 

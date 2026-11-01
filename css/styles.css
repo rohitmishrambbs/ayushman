@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    BoCW District Monitoring & Execution Portal - Premium Modern Stylesheet
    ========================================================================== */
 
@@ -246,41 +246,3 @@ body {
 }
 
 
-/* Zero Poverty CDO Balloon Badge */
-@keyframes balloonBob {
-    0%, 100% {
-        transform: translateY(0) rotate(-3deg);
-    }
-    50% {
-        transform: translateY(-3px) rotate(3deg);
-    }
-}
-
-.zero-poverty-balloon {
-    background: linear-gradient(135deg, #f97316 0%, #e11d48 100%);
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    box-shadow: 0 4px 12px -2px rgba(225, 29, 72, 0.38);
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
-}
-
-.zero-poverty-balloon:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px -3px rgba(225, 29, 72, 0.5);
-}
-
-/* Zero Poverty CDO Balloon Badge - Yellow when at least 1 member is Approved */
-.zero-poverty-balloon-yellow {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.45) !important;
-    box-shadow: 0 4px 12px -2px rgba(217, 119, 6, 0.45) !important;
-    color: #ffffff !important;
-}
-
-.zero-poverty-balloon-yellow:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px -3px rgba(217, 119, 6, 0.6) !important;
-}
-
-.balloon-float {
-    animation: balloonBob 2.4s ease-in-out infinite;
-}
