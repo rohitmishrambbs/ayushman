@@ -301,7 +301,8 @@ function renderFamilyGroups(records, totalCount) {
                         </button>
 
                         <!-- Dial Mobile Phone -->
-                        <a href="tel:${cleanPhone}" class="inline-flex items-center px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-2xs text-xs font-bold transition hover:shadow-emerald-600/30">
+                        <a href="tel:${cleanPhone}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-2xs text-xs font-bold transition hover:shadow-emerald-600/30">
+                            <span>📞</span>
                             <span class="font-mono">${escapeHtml(fam.mobile_no)}</span>
                         </a>
 
