@@ -279,10 +279,10 @@ async function loadBlockData() {
             currentCoveredFamSet = await getCoveredFamilyIds(block, gp);
             const coveredFamIds = Array.from(currentCoveredFamSet);
 
-            query = query.neq('STATUS', 'Approved');
-
             if (coveredFamIds.length > 0 && coveredFamIds.length <= 450) {
                 query = query.not('family_id', 'in', `(${coveredFamIds.join(',')})`);
+            } else if (coveredFamIds.length > 450) {
+                query = query.or('STATUS.is.null,STATUS.neq.Approved');
             }
         } else if (statusFilter !== 'ALL') {
             if (statusFilter === 'EXTRA_ONLY') {
