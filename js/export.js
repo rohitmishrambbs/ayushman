@@ -26,7 +26,7 @@ function applyExportFiltersToQuery(query, { block, gp, statusFilter, searchQuery
     }
 
     if (searchQuery && searchQuery.length > 0) {
-        const q = searchQuery.replace(/,/g, '');
+        const q = searchQuery.replace(/[,()]/g, ' ').trim();
         query = query.or(`member_name.ilike.%${q}%,family_id.ilike.%${q}%,member_id.ilike.%${q}%,mobile_no.ilike.%${q}%,father_name.ilike.%${q}%`);
     }
 
@@ -37,6 +37,8 @@ function applyExportFiltersToQuery(query, { block, gp, statusFilter, searchQuery
  * Fetches all matching rows across Supabase's 1,000-row PostgREST limit
  * using parallelized 1,000-row range chunks and sorts in-memory.
  */
+const EXPORT_COLUMNS = 'family_id, member_id, block_name, gram_panchayat_name, member_name, father_name, type, gender, date_of_birth, birth_year, mobile_no, STATUS, remark';
+
 async function fetchAllMatchingRecordsPaginated(filters, onProgress) {
     // 1. Get exact count first
     let countQuery = supabaseClient
@@ -64,7 +66,7 @@ async function fetchAllMatchingRecordsPaginated(filters, onProgress) {
 
             let dataQuery = supabaseClient
                 .from('bocw_members')
-                .select('*');
+                .select(EXPORT_COLUMNS);
             dataQuery = applyExportFiltersToQuery(dataQuery, filters);
 
             wavePromises.push(

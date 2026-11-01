@@ -790,7 +790,7 @@ async function updateAdminFilterMatchCount() {
             }
         }
         if (searchQuery.length > 0) {
-            const q = searchQuery.replace(/,/g, '');
+            const q = searchQuery.replace(/[,()]/g, ' ').trim();
             query = query.or(`member_name.ilike.%${q}%,family_id.ilike.%${q}%,member_id.ilike.%${q}%,mobile_no.ilike.%${q}%,father_name.ilike.%${q}%`);
         }
 

@@ -165,9 +165,9 @@ function renderFamilyGroups(records, totalCount) {
     });
 
     countLabel.innerText = `${records.length} of ${totalCount.toLocaleString()} Members (${familiesMap.size} Families on Page ${currentPage})`;
-    container.innerHTML = '';
 
     const isDistrictWide = getAuthorizedBlock() === 'ALL';
+    const cardsHtml = [];
 
     familiesMap.forEach(fam => {
         const cleanPhone = fam.mobile_no.replace(/\D/g, '');
@@ -297,8 +297,9 @@ function renderFamilyGroups(records, totalCount) {
                 </div>
             </div>
         `;
-        container.innerHTML += cardHtml;
+        cardsHtml.push(cardHtml);
     });
+    container.innerHTML = cardsHtml.join('');
 }
 
 function updatePaginationControls(totalCount) {
@@ -309,7 +310,36 @@ function updatePaginationControls(totalCount) {
 }
 
 async function copyFamilyId(famId, btnEl) {
-    navigator.clipboard.writeText(famId);
+    // Robust clipboard write with textarea fallback
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(famId);
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = famId;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+    } catch (clipErr) {
+        console.warn('Direct clipboard API unavailable, falling back:', clipErr);
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = famId;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        } catch (e) {
+            console.error('All clipboard methods failed:', e);
+        }
+    }
+
     btnEl.innerHTML = `<span class="text-emerald-700 font-bold flex items-center gap-1">✓ Copied: ${escapeHtml(famId)}</span>`;
     btnEl.classList.remove('bg-slate-50', 'border-slate-300', 'bg-indigo-50/90', 'border-indigo-300');
     btnEl.classList.add('bg-emerald-50', 'border-emerald-500');

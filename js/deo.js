@@ -119,7 +119,7 @@ async function loadBlockData() {
         }
 
         if (searchQuery.length > 0) {
-            const q = searchQuery.replace(/,/g, '');
+            const q = searchQuery.replace(/[,()]/g, ' ').trim();
             query = query.or(`member_name.ilike.%${q}%,family_id.ilike.%${q}%,member_id.ilike.%${q}%,mobile_no.ilike.%${q}%,father_name.ilike.%${q}%`);
         }
 
@@ -378,7 +378,11 @@ async function confirmAddMember() {
             const blkRow = cachedLeaderboard.find(r => r.block_name === targetBlock);
             if (blkRow) {
                 blkRow.extra_added_members = Number(blkRow.extra_added_members || 0) + 1;
-                const field = statusInput === 'Approved' ? 'approved_members' : (statusInput === 'Portal Pending' ? 'pending_members' : 'not_applied_members');
+                let field = 'not_applied_members';
+                if (statusInput === 'Approved') field = 'approved_members';
+                else if (statusInput === 'Portal Pending') field = 'pending_members';
+                else if (statusInput === 'No Record Found') field = 'no_record_members';
+                else if (statusInput === 'Not Traceable') field = 'not_traceable_members';
                 blkRow[field] = Number(blkRow[field] || 0) + 1;
             }
         }
@@ -414,6 +418,22 @@ async function deleteExtraMember(internalMemberId, memberName) {
 
         const { error } = await delQuery;
         if (error) throw error;
+
+        const deletedRec = currentLoadedRecords.find(r => String(r.member_id) === String(internalMemberId));
+        if (deletedRec && cachedLeaderboard) {
+            const blkName = deletedRec.block_name || authBlock;
+            const blkRow = cachedLeaderboard.find(r => r.block_name === blkName);
+            if (blkRow) {
+                blkRow.extra_added_members = Math.max(0, Number(blkRow.extra_added_members || 0) - 1);
+                const st = cleanStatus(deletedRec.STATUS);
+                let field = 'not_applied_members';
+                if (st === 'Approved') field = 'approved_members';
+                else if (st === 'Portal Pending') field = 'pending_members';
+                else if (st === 'No Record Found') field = 'no_record_members';
+                else if (st === 'Not Traceable') field = 'not_traceable_members';
+                blkRow[field] = Math.max(0, Number(blkRow[field] || 0) - 1);
+            }
+        }
 
         currentLoadedRecords = currentLoadedRecords.filter(r => String(r.member_id) !== String(internalMemberId));
         currentTotalCount = Math.max(currentLoadedRecords.length, (currentTotalCount || 1) - 1);

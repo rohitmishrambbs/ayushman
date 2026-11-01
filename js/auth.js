@@ -150,6 +150,10 @@ function logoutPortalUser() {
     currentDailyReportDate = '';
     currentPage = 1;
 
+    if (gpCacheByBlock) gpCacheByBlock.clear();
+    lastFilterFingerprint = null;
+    if (copiedFamiliesInSession) copiedFamiliesInSession.clear();
+
     leaderboardSortState = { col: null, asc: false };
     dailyProgressSortState = { col: null, asc: false };
     copiedReportSortState = { col: null, asc: false };
