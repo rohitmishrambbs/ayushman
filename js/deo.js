@@ -166,6 +166,15 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
     data.block_uncovered_families = Math.max(0, blockFamiliesSet.size - blockApprovedFamiliesSet.size);
     data.block_total_families = blockFamiliesSet.size;
     data.block_approved_families = blockApprovedFamiliesSet.size;
+    data.block_uncovered_family_ids = Array.from(blockFamiliesSet).filter(id => !blockApprovedFamiliesSet.has(id));
+
+    // Prime covered families cache to eliminate subsequent database queries
+    if (typeof coveredFamilyIdsCache !== 'undefined' && coveredFamilyIdsCache) {
+        coveredFamilyIdsCache.set(`${block}__ALL`, blockApprovedFamiliesSet);
+        gpStatsMap.forEach((stObj, gpName) => {
+            coveredFamilyIdsCache.set(`${block}__${gpName}`, stObj.approved_families);
+        });
+    }
 
     if (gpCacheByBlock) gpCacheByBlock.set(block, data);
     return data;
@@ -280,10 +289,16 @@ async function loadBlockData() {
             currentCoveredFamSet = await getCoveredFamilyIds(block, gp);
             const coveredFamIds = Array.from(currentCoveredFamSet);
 
-            if (coveredFamIds.length > 0 && coveredFamIds.length <= 450) {
+            if (coveredFamIds.length > 0 && coveredFamIds.length <= 200) {
                 query = query.not('family_id', 'in', `(${coveredFamIds.join(',')})`);
-            } else if (coveredFamIds.length > 450) {
-                query = query.or('STATUS.is.null,STATUS.neq.Approved');
+            } else if (coveredFamIds.length > 200) {
+                const blockGps = gpCacheByBlock && gpCacheByBlock.get(block);
+                const uncovIds = blockGps && blockGps.block_uncovered_family_ids;
+                if (uncovIds && uncovIds.length > 0 && uncovIds.length <= 200) {
+                    query = query.in('family_id', uncovIds);
+                } else {
+                    query = query.or('STATUS.is.null,STATUS.neq.Approved');
+                }
             }
         } else if (statusFilter !== 'ALL') {
             if (statusFilter === 'EXTRA_ONLY') {
@@ -412,20 +427,18 @@ async function updateBlockSummaryBar(block, forceRefresh = false) {
     const bar = document.getElementById('blockSummaryBar');
     if (!bar) return;
 
-    const gpSelect = document.getElementById('gpSelector');
-    const selectedGp = gpSelect ? gpSelect.value : 'ALL';
-
-    if (authorizedBlock !== 'ALL' && selectedGp && selectedGp !== 'ALL') {
+    // Fast path: Block DEO uses in-memory block GP cache (0 database queries)
+    if (authorizedBlock !== 'ALL') {
         if (!gpCacheByBlock || !gpCacheByBlock.has(authorizedBlock)) {
             try {
-                await fetchBlockGpsData(authorizedBlock);
+                await fetchBlockGpsData(authorizedBlock, forceRefresh);
             } catch (e) {}
         }
         renderSummaryBarFromLeaderboard(authorizedBlock);
         return;
     }
 
-    // Use cached leaderboard if available to eliminate expensive full-district RPC scans
+    // Master Admin district-wide summary: Use cached leaderboard if available
     if (!forceRefresh && cachedLeaderboard && cachedLeaderboard.length > 0) {
         renderSummaryBarFromLeaderboard(authorizedBlock);
         return;
@@ -453,6 +466,34 @@ function renderSummaryBarFromLeaderboard(authorizedBlock) {
         const gps = gpCacheByBlock.get(authorizedBlock);
         if (Array.isArray(gps)) {
             row = gps.find(g => g.gram_panchayat_name === selectedGp) || null;
+        }
+    } else if (authorizedBlock !== 'ALL' && gpCacheByBlock && gpCacheByBlock.has(authorizedBlock)) {
+        // Aggregate block metrics directly from cached GP rows without full district RPC
+        const gps = gpCacheByBlock.get(authorizedBlock);
+        if (Array.isArray(gps) && gps.length > 0) {
+            row = gps.reduce((acc, g) => {
+                acc.total_members += Number(g.total_members || 0);
+                acc.total_families += Number(g.total_families || 0);
+                acc.approved_members += Number(g.approved_members || 0);
+                acc.pending_members += Number(g.pending_members || 0);
+                acc.not_applied_members += Number(g.not_applied_members || 0);
+                acc.unidentified_members += Number(g.unidentified_members || 0);
+                acc.no_record_members += Number(g.no_record_members || 0);
+                acc.not_traceable_members += Number(g.not_traceable_members || 0);
+                acc.extra_added_members += Number(g.extra_added_members || 0);
+                return acc;
+            }, {
+                total_members: 0,
+                total_families: gps.block_total_families || 0,
+                approved_members: 0,
+                pending_members: 0,
+                not_applied_members: 0,
+                unidentified_members: 0,
+                no_record_members: 0,
+                not_traceable_members: 0,
+                extra_added_members: 0,
+                uncovered_families: gps.block_uncovered_families || 0
+            });
         }
     }
 
@@ -871,8 +912,23 @@ async function saveMemberStatus(memberId, status, remark) {
         // Optimistic in-memory counter updates (0 database round-trips)
         applyLocalStatusDelta(recBlock, oldStatus, status, 1);
         applyLocalGpApprovalDelta(recBlock, gpName, oldStatus, status, 1);
-        if (oldStatus === 'Approved' || status === 'Approved') {
-            if (typeof coveredFamilyIdsCache !== 'undefined' && coveredFamilyIdsCache) coveredFamilyIdsCache.clear();
+        // Reactive in-place covered families cache update (no invalidation or re-fetch)
+        if (typeof coveredFamilyIdsCache !== 'undefined' && coveredFamilyIdsCache) {
+            const famIdStr = String(rec?.family_id ?? '');
+            if (status === 'Approved' && famIdStr) {
+                const allKey = `${recBlock}__ALL`;
+                const gpKey = `${recBlock}__${gpName}`;
+                if (coveredFamilyIdsCache.has(allKey)) coveredFamilyIdsCache.get(allKey).add(famIdStr);
+                if (coveredFamilyIdsCache.has(gpKey)) coveredFamilyIdsCache.get(gpKey).add(famIdStr);
+            } else if (oldStatus === 'Approved' && famIdStr) {
+                const hasOtherApproved = currentLoadedRecords.some(r => String(r.family_id) === famIdStr && String(r.member_id) !== String(memberId) && cleanStatus(r.STATUS) === 'Approved');
+                if (!hasOtherApproved) {
+                    const allKey = `${recBlock}__ALL`;
+                    const gpKey = `${recBlock}__${gpName}`;
+                    if (coveredFamilyIdsCache.has(allKey)) coveredFamilyIdsCache.get(allKey).delete(famIdStr);
+                    if (coveredFamilyIdsCache.has(gpKey)) coveredFamilyIdsCache.get(gpKey).delete(famIdStr);
+                }
+            }
         }
 
         statusText.innerText = `✓ Saved Status`;
@@ -942,7 +998,20 @@ async function saveFamilyStatus(familyId, status, remark) {
             m.remark = finalRemark;
         });
 
-        if (typeof coveredFamilyIdsCache !== 'undefined' && coveredFamilyIdsCache) coveredFamilyIdsCache.clear();
+        // Reactive in-place covered families cache update
+        if (typeof coveredFamilyIdsCache !== 'undefined' && coveredFamilyIdsCache) {
+            const famIdStr = String(familyId ?? '');
+            const allKey = `${authBlock}__ALL`;
+            const mGp = famMembers.length > 0 ? (famMembers[0].gram_panchayat_name || '') : '';
+            const gpKey = `${authBlock}__${mGp}`;
+            if (status === 'Approved' && famIdStr) {
+                if (coveredFamilyIdsCache.has(allKey)) coveredFamilyIdsCache.get(allKey).add(famIdStr);
+                if (coveredFamilyIdsCache.has(gpKey)) coveredFamilyIdsCache.get(gpKey).add(famIdStr);
+            } else if (famIdStr) {
+                if (coveredFamilyIdsCache.has(allKey)) coveredFamilyIdsCache.get(allKey).delete(famIdStr);
+                if (coveredFamilyIdsCache.has(gpKey)) coveredFamilyIdsCache.get(gpKey).delete(famIdStr);
+            }
+        }
 
         statusText.innerText = `✓ Saved Family ${familyId}`;
         renderFamilyGroups(currentLoadedRecords, currentTotalCount || currentLoadedRecords.length);
