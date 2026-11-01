@@ -6,6 +6,44 @@
 
 const DEO_CARD_COLUMNS = 'family_id, member_id, block_name, gram_panchayat_name, member_name, father_name, type, gender, date_of_birth, birth_year, mobile_no, STATUS, remark';
 
+async function fetchBlockGpsData(block, forceRefresh = false) {
+    if (!forceRefresh && gpCacheByBlock && gpCacheByBlock.has(block)) {
+        return gpCacheByBlock.get(block);
+    }
+
+    const [rpcRes, procRes] = await Promise.all([
+        supabaseClient.rpc('get_block_gps', { p_block: block }),
+        supabaseClient
+            .from('bocw_members')
+            .select('gram_panchayat_name')
+            .eq('block_name', block)
+            .in('STATUS', ['Approved', 'Portal Pending', 'No Record Found', 'Not Traceable'])
+            .limit(10000)
+    ]);
+
+    if (rpcRes.error) throw rpcRes.error;
+    const data = rpcRes.data || [];
+
+    // Tally all non-Not-Applied (processed) members by GP
+    const procMap = new Map();
+    if (procRes && procRes.data) {
+        procRes.data.forEach(r => {
+            const gp = String(r.gram_panchayat_name ?? '').trim();
+            if (gp) procMap.set(gp, (procMap.get(gp) || 0) + 1);
+        });
+    }
+
+    data.forEach(gp => {
+        const gpName = String(gp.gram_panchayat_name ?? '').trim();
+        const processedCount = procMap.has(gpName) ? procMap.get(gpName) : Number(gp.approved_members || 0);
+        gp.processed_members = processedCount;
+        gp.approved_members = processedCount;
+    });
+
+    if (gpCacheByBlock) gpCacheByBlock.set(block, data);
+    return data;
+}
+
 async function loadGPDropdown(preserveSelection = false, forceRefresh = false) {
     const block = getAuthorizedBlock();
     if (!block) return;
@@ -20,7 +58,7 @@ async function loadGPDropdown(preserveSelection = false, forceRefresh = false) {
     }
 
     // Reuse in-memory cache to eliminate repetitive RPC calls
-    if (!forceRefresh && gpCacheByBlock.has(block)) {
+    if (!forceRefresh && gpCacheByBlock && gpCacheByBlock.has(block)) {
         const cachedData = gpCacheByBlock.get(block);
         renderGPOptions(gpSelect, block, cachedData, preserveSelection, previousValue);
         return;
@@ -31,10 +69,7 @@ async function loadGPDropdown(preserveSelection = false, forceRefresh = false) {
     }
 
     try {
-        const { data, error } = await supabaseClient.rpc('get_block_gps', { p_block: block });
-        if (error) throw error;
-
-        gpCacheByBlock.set(block, data || []);
+        const data = await fetchBlockGpsData(block, forceRefresh);
         renderGPOptions(gpSelect, block, data, preserveSelection, previousValue);
     } catch (err) {
         if (!preserveSelection) {
@@ -48,9 +83,11 @@ function renderGPOptions(gpSelect, block, data, preserveSelection, previousValue
     if (data && data.length > 0) {
         data.forEach(gp => {
             const gpName = String(gp.gram_panchayat_name ?? '');
+            const count = Number(gp.processed_members ?? gp.approved_members ?? 0);
+            const total = Number(gp.total_members ?? 0);
             const opt = document.createElement('option');
             opt.value = gpName;
-            opt.innerText = `${gpName} (${gp.approved_members}/${gp.total_members} Approved)`;
+            opt.innerText = `${gpName} (${count}/${total} Processed)`;
             gpSelect.appendChild(opt);
         });
     }
@@ -184,19 +221,35 @@ function applyLocalStatusDelta(block, oldStatus, newStatus, delta = 1) {
 }
 
 function applyLocalGpApprovalDelta(block, gpName, oldStatus, newStatus, delta = 1) {
-    if (!gpCacheByBlock.has(block) || !gpName) return;
+    if (!gpCacheByBlock || !gpCacheByBlock.has(block) || !gpName) return;
     const cleanOld = cleanStatus(oldStatus);
     const cleanNew = cleanStatus(newStatus);
     if (cleanOld === cleanNew) return;
+
+    const oldProcessed = cleanOld !== 'Not Applied';
+    const newProcessed = cleanNew !== 'Not Applied';
+    if (oldProcessed === newProcessed) return;
 
     const gps = gpCacheByBlock.get(block);
     if (!Array.isArray(gps)) return;
     const gpEntry = gps.find(g => g.gram_panchayat_name === gpName);
     if (gpEntry) {
-        if (cleanOld === 'Approved' && cleanNew !== 'Approved') {
+        if (oldProcessed && !newProcessed) {
+            gpEntry.processed_members = Math.max(0, Number(gpEntry.processed_members ?? gpEntry.approved_members ?? 0) - delta);
             gpEntry.approved_members = Math.max(0, Number(gpEntry.approved_members || 0) - delta);
-        } else if (cleanOld !== 'Approved' && cleanNew === 'Approved') {
+        } else if (!oldProcessed && newProcessed) {
+            gpEntry.processed_members = Number(gpEntry.processed_members ?? gpEntry.approved_members ?? 0) + delta;
             gpEntry.approved_members = Number(gpEntry.approved_members || 0) + delta;
+        }
+
+        const gpSelect = document.getElementById('gpSelector');
+        if (gpSelect) {
+            const opt = Array.from(gpSelect.options).find(o => o.value === gpName);
+            if (opt) {
+                const count = Number(gpEntry.processed_members ?? gpEntry.approved_members ?? 0);
+                const total = Number(gpEntry.total_members ?? 0);
+                opt.innerText = `${gpName} (${count}/${total} Processed)`;
+            }
         }
     }
 }
@@ -386,6 +439,25 @@ async function confirmAddMember() {
                 blkRow[field] = Number(blkRow[field] || 0) + 1;
             }
         }
+
+        // Live update GP dropdown counter if new member is processed
+        if (statusInput !== 'Not Applied' && gpCacheByBlock && gpCacheByBlock.has(targetBlock)) {
+            const gps = gpCacheByBlock.get(targetBlock);
+            const gpEntry = gps && gps.find(g => g.gram_panchayat_name === targetGp);
+            if (gpEntry) {
+                gpEntry.processed_members = Number(gpEntry.processed_members ?? gpEntry.approved_members ?? 0) + 1;
+                gpEntry.approved_members = Number(gpEntry.approved_members || 0) + 1;
+                const gpSelect = document.getElementById('gpSelector');
+                if (gpSelect) {
+                    const opt = Array.from(gpSelect.options).find(o => o.value === targetGp);
+                    if (opt) {
+                        const count = Number(gpEntry.processed_members ?? gpEntry.approved_members ?? 0);
+                        const total = Number(gpEntry.total_members ?? 0);
+                        opt.innerText = `${targetGp} (${count}/${total} Processed)`;
+                    }
+                }
+            }
+        }
         renderSummaryBarFromLeaderboard(authBlock);
         statusText.innerText = `✓ Added ${nameInput}`;
         showToast(`Member "${nameInput}" added to Family ${newRecord.family_id}`, "success");
@@ -432,6 +504,29 @@ async function deleteExtraMember(internalMemberId, memberName) {
                 else if (st === 'No Record Found') field = 'no_record_members';
                 else if (st === 'Not Traceable') field = 'not_traceable_members';
                 blkRow[field] = Math.max(0, Number(blkRow[field] || 0) - 1);
+            }
+        }
+
+        if (deletedRec && gpCacheByBlock) {
+            const blkName = deletedRec.block_name || authBlock;
+            const gpName = deletedRec.gram_panchayat_name;
+            const st = cleanStatus(deletedRec.STATUS);
+            if (st !== 'Not Applied' && gpCacheByBlock.has(blkName) && gpName) {
+                const gps = gpCacheByBlock.get(blkName);
+                const gpEntry = gps && gps.find(g => g.gram_panchayat_name === gpName);
+                if (gpEntry) {
+                    gpEntry.processed_members = Math.max(0, Number(gpEntry.processed_members ?? gpEntry.approved_members ?? 0) - 1);
+                    gpEntry.approved_members = Math.max(0, Number(gpEntry.approved_members || 0) - 1);
+                    const gpSelect = document.getElementById('gpSelector');
+                    if (gpSelect) {
+                        const opt = Array.from(gpSelect.options).find(o => o.value === gpName);
+                        if (opt) {
+                            const count = Number(gpEntry.processed_members ?? gpEntry.approved_members ?? 0);
+                            const total = Number(gpEntry.total_members ?? 0);
+                            opt.innerText = `${gpName} (${count}/${total} Processed)`;
+                        }
+                    }
+                }
             }
         }
 

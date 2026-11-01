@@ -140,7 +140,20 @@ async function handleLoginSubmit(event) {
 }
 
 function logoutPortalUser() {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    try {
+        localStorage.clear();
+    } catch (e) {
+        console.warn('localStorage clear failed:', e);
+    }
+    try {
+        sessionStorage.clear();
+    } catch (e) {
+        console.warn('sessionStorage clear failed:', e);
+    }
+    if (typeof window !== 'undefined' && window.caches && caches.keys) {
+        caches.keys().then(names => names.forEach(name => caches.delete(name))).catch(() => {});
+    }
+
     currentSession = null;
     currentLoadedRecords = [];
     currentTotalCount = 0;
@@ -149,6 +162,8 @@ function logoutPortalUser() {
     cachedCopiedReport = { gpRows: [], familyRows: [], blockScope: 'ALL' };
     currentDailyReportDate = '';
     currentPage = 1;
+    pendingTraceableTarget = null;
+    pendingAddFamilyContext = null;
 
     if (gpCacheByBlock) gpCacheByBlock.clear();
     lastFilterFingerprint = null;
@@ -161,12 +176,29 @@ function logoutPortalUser() {
     updateSortIcons('dailyProgressTable', dailyProgressSortState);
     updateSortIcons('copiedReportTable', copiedReportSortState);
 
-    document.getElementById('familyListContainer').innerHTML = '';
-    document.getElementById('leaderboardTableBody').innerHTML = '';
+    const famContainer = document.getElementById('familyListContainer');
+    if (famContainer) famContainer.innerHTML = '';
+    const lbTbody = document.getElementById('leaderboardTableBody');
+    if (lbTbody) lbTbody.innerHTML = '';
     const dailyTbody = document.getElementById('dailyProgressTableBody');
     if (dailyTbody) dailyTbody.innerHTML = '';
     const copiedTbody = document.getElementById('copiedReportTableBody');
     if (copiedTbody) copiedTbody.innerHTML = '';
+
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
+    const statusFilter = document.getElementById('statusFilter');
+    if (statusFilter) statusFilter.value = 'ALL';
+    const gpSelect = document.getElementById('gpSelector');
+    if (gpSelect) gpSelect.innerHTML = '<option value="ALL">All Gram Panchayats</option>';
+
+    const adminSearch = document.getElementById('adminSearchInput');
+    if (adminSearch) adminSearch.value = '';
+    const adminStatus = document.getElementById('adminStatusFilter');
+    if (adminStatus) adminStatus.value = 'ALL';
+    const adminGp = document.getElementById('adminGpSelector');
+    if (adminGp) adminGp.innerHTML = '<option value="ALL">All Gram Panchayats</option>';
+
     const copiedBlockSelect = document.getElementById('copiedReportBlockSelector');
     if (copiedBlockSelect) copiedBlockSelect.value = '';
     const antiCheatBanner = document.getElementById('antiCheatBanner');
@@ -181,7 +213,7 @@ function logoutPortalUser() {
     if (passwordInput) passwordInput.value = '';
     if (usernameInput) usernameInput.focus();
 
-    showToast('Signed out successfully', 'info', 2000);
+    showToast('Signed out successfully. All cache cleared.', 'info', 2000);
 }
 
 function configureBlockSelectorForSession(session) {

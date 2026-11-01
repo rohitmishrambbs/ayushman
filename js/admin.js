@@ -714,41 +714,35 @@ async function onAdminBlockFilterChange() {
 
     if (gpCacheByBlock && gpCacheByBlock.has(block)) {
         const data = gpCacheByBlock.get(block);
-        gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats in ${block} (${data ? data.length : 0} GPs)</option>`;
-        if (data && data.length > 0) {
-            data.forEach(gp => {
-                const gpName = String(gp.gram_panchayat_name ?? '');
-                const opt = document.createElement('option');
-                opt.value = gpName;
-                opt.innerText = `${gpName} (${gp.approved_members}/${gp.total_members} Approved)`;
-                gpSelect.appendChild(opt);
-            });
-        }
+        renderAdminGPOptions(gpSelect, block, data);
         await updateAdminFilterMatchCount();
         return;
     }
 
     gpSelect.innerHTML = `<option value="ALL">Loading GPs for ${block}...</option>`;
     try {
-        const { data, error } = await supabaseClient.rpc('get_block_gps', { p_block: block });
-        if (error) throw error;
-
-        if (gpCacheByBlock) gpCacheByBlock.set(block, data || []);
-        gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats in ${block} (${data ? data.length : 0} GPs)</option>`;
-        if (data && data.length > 0) {
-            data.forEach(gp => {
-                const gpName = String(gp.gram_panchayat_name ?? '');
-                const opt = document.createElement('option');
-                opt.value = gpName;
-                opt.innerText = `${gpName} (${gp.approved_members}/${gp.total_members} Approved)`;
-                gpSelect.appendChild(opt);
-            });
-        }
+        const data = await fetchBlockGpsData(block);
+        renderAdminGPOptions(gpSelect, block, data);
     } catch (err) {
         gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats</option>`;
     }
 
     await updateAdminFilterMatchCount();
+}
+
+function renderAdminGPOptions(gpSelect, block, data) {
+    gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats in ${block} (${data ? data.length : 0} GPs)</option>`;
+    if (data && data.length > 0) {
+        data.forEach(gp => {
+            const gpName = String(gp.gram_panchayat_name ?? '');
+            const count = Number(gp.processed_members ?? gp.approved_members ?? 0);
+            const total = Number(gp.total_members ?? 0);
+            const opt = document.createElement('option');
+            opt.value = gpName;
+            opt.innerText = `${gpName} (${count}/${total} Processed)`;
+            gpSelect.appendChild(opt);
+        });
+    }
 }
 
 async function updateAdminFilterMatchCount() {
