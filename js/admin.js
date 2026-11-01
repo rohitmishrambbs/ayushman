@@ -739,7 +739,7 @@ function renderAdminGPOptions(gpSelect, block, data) {
             const total = Number(gp.total_members ?? 0);
             const opt = document.createElement('option');
             opt.value = gpName;
-            opt.innerText = `${gpName} (${count}/${total} Processed)`;
+            opt.innerText = formatGPOptionText(gpName, count, total, gp.latest_timestamp);
             gpSelect.appendChild(opt);
         });
     }

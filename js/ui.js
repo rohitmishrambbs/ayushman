@@ -67,6 +67,39 @@ function formatIstTimestampShort(isoStr) {
     }
 }
 
+function formatIstDateShort(isoStr) {
+    if (!isoStr) return '';
+    try {
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return '';
+        const parts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Asia/Kolkata',
+            day: '2-digit',
+            month: '2-digit',
+            year: '2-digit'
+        }).formatToParts(d);
+        const day = parts.find(p => p.type === 'day')?.value;
+        const month = parts.find(p => p.type === 'month')?.value;
+        const year = parts.find(p => p.type === 'year')?.value;
+        if (day && month && year) {
+            return `${day}/${month}/${year}`;
+        }
+        return '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function formatGPOptionText(gpName, processedCount, totalCount, latestTimestamp) {
+    const count = Number(processedCount || 0);
+    const total = Number(totalCount || 0);
+    const dateStr = formatIstDateShort(latestTimestamp);
+    if (dateStr) {
+        return `${gpName} (${count}/${total} updated ${dateStr})`;
+    }
+    return `${gpName} (${count}/${total})`;
+}
+
 const COPIED_MARKER = '[COPIED]';
 
 function isRecordCopied(remark) {

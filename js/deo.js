@@ -15,7 +15,7 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
         supabaseClient.rpc('get_block_gps', { p_block: block }),
         supabaseClient
             .from('bocw_members')
-            .select('gram_panchayat_name, family_id, member_id, STATUS')
+            .select('gram_panchayat_name, family_id, member_id, STATUS, updated_at')
             .eq('block_name', block)
             .limit(10000)
     ]);
@@ -23,7 +23,7 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
     if (rpcRes.error) throw rpcRes.error;
     const data = rpcRes.data || [];
 
-    // Compute per-GP status breakdown & unique family counts
+    // Compute per-GP status breakdown, unique family counts & latest processing date
     const gpStatsMap = new Map();
     if (membersRes && membersRes.data) {
         membersRes.data.forEach(r => {
@@ -39,7 +39,8 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
                     no_record_members: 0,
                     not_traceable_members: 0,
                     extra_added_members: 0,
-                    processed_members: 0
+                    processed_members: 0,
+                    latest_timestamp: null
                 });
             }
             const stObj = gpStatsMap.get(gp);
@@ -50,6 +51,7 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
             }
 
             const st = cleanStatus(r.STATUS);
+            const isProcessed = st !== 'Not Applied';
             if (st === 'Approved') {
                 stObj.approved_members++;
                 stObj.processed_members++;
@@ -64,6 +66,12 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
                 stObj.processed_members++;
             } else {
                 stObj.not_applied_members++;
+            }
+
+            if (isProcessed && r.updated_at) {
+                if (!stObj.latest_timestamp || r.updated_at > stObj.latest_timestamp) {
+                    stObj.latest_timestamp = r.updated_at;
+                }
             }
         });
     }
@@ -82,6 +90,7 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
             gp.not_traceable_members = stObj.not_traceable_members;
             gp.extra_added_members = stObj.extra_added_members;
             gp.processed_members = stObj.processed_members;
+            gp.latest_timestamp = stObj.latest_timestamp;
         } else {
             const fallbackApp = Number(gp.approved_members || 0);
             const fallbackTot = Number(gp.total_members || 0);
@@ -94,6 +103,7 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
             gp.not_traceable_members = 0;
             gp.extra_added_members = 0;
             gp.processed_members = fallbackApp;
+            gp.latest_timestamp = null;
         }
     });
 
@@ -144,7 +154,7 @@ function renderGPOptions(gpSelect, block, data, preserveSelection, previousValue
             const total = Number(gp.total_members ?? 0);
             const opt = document.createElement('option');
             opt.value = gpName;
-            opt.innerText = `${gpName} (${count}/${total} Processed)`;
+            opt.innerText = formatGPOptionText(gpName, count, total, gp.latest_timestamp);
             gpSelect.appendChild(opt);
         });
     }
@@ -306,6 +316,9 @@ function applyLocalGpApprovalDelta(block, gpName, oldStatus, newStatus, delta = 
             gpEntry.processed_members = Math.max(0, Number(gpEntry.processed_members ?? 0) - delta);
         } else if (!oldProcessed && newProcessed) {
             gpEntry.processed_members = Number(gpEntry.processed_members ?? 0) + delta;
+            gpEntry.latest_timestamp = new Date().toISOString();
+        } else if (newProcessed) {
+            gpEntry.latest_timestamp = new Date().toISOString();
         }
 
         const gpSelect = document.getElementById('gpSelector');
@@ -314,7 +327,7 @@ function applyLocalGpApprovalDelta(block, gpName, oldStatus, newStatus, delta = 
             if (opt) {
                 const count = Number(gpEntry.processed_members ?? gpEntry.approved_members ?? 0);
                 const total = Number(gpEntry.total_members ?? 0);
-                opt.innerText = `${gpName} (${count}/${total} Processed)`;
+                opt.innerText = formatGPOptionText(gpName, count, total, gpEntry.latest_timestamp);
             }
         }
     }
@@ -548,6 +561,7 @@ async function confirmAddMember() {
 
                 if (statusInput !== 'Not Applied') {
                     gpEntry.processed_members = Number(gpEntry.processed_members ?? 0) + 1;
+                    gpEntry.latest_timestamp = new Date().toISOString();
                 }
                 const gpSelect = document.getElementById('gpSelector');
                 if (gpSelect) {
@@ -555,7 +569,7 @@ async function confirmAddMember() {
                     if (opt) {
                         const count = Number(gpEntry.processed_members ?? gpEntry.approved_members ?? 0);
                         const total = Number(gpEntry.total_members ?? 0);
-                        opt.innerText = `${targetGp} (${count}/${total} Processed)`;
+                        opt.innerText = formatGPOptionText(targetGp, count, total, gpEntry.latest_timestamp);
                     }
                 }
             }
@@ -634,7 +648,7 @@ async function deleteExtraMember(internalMemberId, memberName) {
                         if (opt) {
                             const count = Number(gpEntry.processed_members ?? gpEntry.approved_members ?? 0);
                             const total = Number(gpEntry.total_members ?? 0);
-                            opt.innerText = `${gpName} (${count}/${total} Processed)`;
+                            opt.innerText = formatGPOptionText(gpName, count, total, gpEntry.latest_timestamp);
                         }
                     }
                 }
