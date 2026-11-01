@@ -90,14 +90,26 @@ function formatIstDateShort(isoStr) {
     }
 }
 
+function toBoldSansText(str) {
+    if (!str) return '';
+    return String(str).replace(/[A-Za-z0-9]/g, c => {
+        const code = c.charCodeAt(0);
+        if (code >= 65 && code <= 90) return String.fromCodePoint(0x1D5D4 + code - 65);
+        if (code >= 97 && code <= 122) return String.fromCodePoint(0x1D5EE + code - 97);
+        if (code >= 48 && code <= 57) return String.fromCodePoint(0x1D7EC + code - 48);
+        return c;
+    });
+}
+
 function formatGPOptionText(gpName, processedCount, totalCount, latestTimestamp) {
     const count = Number(processedCount || 0);
     const total = Number(totalCount || 0);
     const dateStr = formatIstDateShort(latestTimestamp);
+    const boldGpName = toBoldSansText(gpName);
     if (dateStr) {
-        return `${gpName} (${count}/${total}) last updated on ${dateStr}`;
+        return `${boldGpName} (${count}/${total}) last updated on ${dateStr}`;
     }
-    return `${gpName} (${count}/${total})`;
+    return `${boldGpName} (${count}/${total})`;
 }
 
 const COPIED_MARKER = '[COPIED]';
