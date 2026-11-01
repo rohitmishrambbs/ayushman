@@ -385,11 +385,20 @@ function renderFamilyGroups(records, totalCount) {
             : '';
 
         const uncText = zpMatch ? (zpMatch.uncovered_family || zpMatch['अनाच्छादित_परिवार'] || 'Yes') : 'Yes';
+        const isUncoveredNo = String(uncText).trim().toLowerCase() === 'no';
+        const balloonClass = isUncoveredNo
+            ? 'zero-poverty-balloon zero-poverty-balloon-yellow'
+            : 'zero-poverty-balloon';
+        const uncTagBadge = isUncoveredNo
+            ? `<span class="text-[9.5px] font-black uppercase tracking-wider bg-black/20 px-1.5 py-0.5 rounded-full">No Uncovered</span>`
+            : '';
+
         const zeroPovertyBalloonHtml = zpMatch
-            ? `<span title="Zero Poverty CDO Matched • HOHH: ${escapeHtml(zpMatch.hohh_name)} | Uncovered Family: ${escapeHtml(uncText)} | GP: ${escapeHtml(zpMatch.gram_panchayat_name)} | Block: ${escapeHtml(zpMatch.block)}" class="zero-poverty-balloon inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold text-white shadow-sm select-none">
+            ? `<span title="Zero Poverty CDO Matched • HOHH: ${escapeHtml(zpMatch.hohh_name)} | Uncovered Family: ${escapeHtml(uncText)} | GP: ${escapeHtml(zpMatch.gram_panchayat_name)} | Block: ${escapeHtml(zpMatch.block)}" class="${balloonClass} inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold text-white shadow-sm select-none">
                 <span class="balloon-float inline-block text-sm leading-none">🎈</span>
                 <span>Zero Poverty</span>
                 <span class="text-[10px] font-semibold bg-white/20 px-1.5 py-0.5 rounded-full">HOHH: ${escapeHtml(zpMatch.hohh_name)}</span>
+                ${uncTagBadge}
                </span>`
             : '';
 
