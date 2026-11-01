@@ -777,6 +777,8 @@ async function updateAdminFilterMatchCount() {
         if (statusFilter !== 'ALL') {
             if (statusFilter === 'EXTRA_ONLY') {
                 query = query.ilike('member_id', 'EXTRA_%');
+            } else if (statusFilter === 'ZERO_POVERTY') {
+                query = query.not('member_id', 'ilike', 'EXTRA_%');
             } else if (statusFilter === 'Not Applied') {
                 query = query.or('STATUS.is.null,STATUS.eq.Not Applied,STATUS.eq.Unidentified,STATUS.eq.NULL,STATUS.eq.');
             } else {

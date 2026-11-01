@@ -166,6 +166,7 @@ function logoutPortalUser() {
     pendingAddFamilyContext = null;
 
     if (gpCacheByBlock) gpCacheByBlock.clear();
+    if (typeof zeroPovertyByPhoneCache !== 'undefined' && zeroPovertyByPhoneCache) zeroPovertyByPhoneCache.clear();
     lastFilterFingerprint = null;
     if (copiedFamiliesInSession) copiedFamiliesInSession.clear();
 

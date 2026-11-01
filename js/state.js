@@ -15,5 +15,6 @@ let currentPage = 1;
 let pendingTraceableTarget = null;
 let pendingAddFamilyContext = null; // { family_id, block_name, gp_name, mobile_no }
 let gpCacheByBlock = new Map();
+let zeroPovertyByPhoneCache = new Map();
 let lastFilterFingerprint = null;
 let copiedFamiliesInSession = new Set();
