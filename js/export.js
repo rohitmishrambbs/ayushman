@@ -177,9 +177,17 @@ async function exportCampCallListExcel() {
     const block = getAuthorizedBlock();
     if (!block) return;
 
-    const gp = document.getElementById('gpSelector').value;
-    const statusFilter = document.getElementById('statusFilter').value;
-    const searchQuery = document.getElementById('searchInput').value.trim();
+    const gp = document.getElementById('gpSelector')?.value || 'ALL';
+    const statusFilter = document.getElementById('statusFilter')?.value || 'ALL';
+    const searchQuery = document.getElementById('searchInput')?.value.trim() || '';
+
+    const gpDetail = (gp && gp !== 'ALL') ? `\nGram Panchayat: ${gp}` : '\nGram Panchayat: All Gram Panchayats';
+    const statusDetail = (statusFilter && statusFilter !== 'ALL') ? `\nStatus: ${statusFilter}` : '';
+    const searchDetail = searchQuery ? `\nSearch: "${searchQuery}"` : '';
+    const confirmMsg = `Are you sure you want to download Member Verification List (.xlsx)?\n\nBlock: ${block}${gpDetail}${statusDetail}${searchDetail}`;
+
+    if (!confirm(confirmMsg)) return;
+
     const statusText = document.getElementById('syncStatusText');
     const btnEl = document.getElementById('exportListBtn');
     const originalBtnHtml = btnEl ? btnEl.innerHTML : '<span>Download List (.xlsx)</span>';
@@ -239,6 +247,9 @@ async function exportNotAppliedGpWiseExcel() {
 
     const block = getAuthorizedBlock();
     if (!block) return;
+
+    const confirmMsg = `Are you sure you want to download Block Summary (.xlsx) for ${block}?\n\nThis will download the GP-wise summary of Total Members and Not Applied Members.`;
+    if (!confirm(confirmMsg)) return;
 
     const statusText = document.getElementById('syncStatusText');
     const btnEl = document.getElementById('exportSummaryBtn');
