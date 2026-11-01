@@ -384,8 +384,9 @@ function renderFamilyGroups(records, totalCount) {
             ? `<span class="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 border border-indigo-300 text-xs font-bold px-2.5 py-1.5 rounded-xl">Block: ${escapeHtml(fam.block_name)}</span>`
             : '';
 
+        const uncText = zpMatch ? (zpMatch.uncovered_family || zpMatch['अनाच्छादित_परिवार'] || 'Yes') : 'Yes';
         const zeroPovertyBalloonHtml = zpMatch
-            ? `<span title="Zero Poverty CDO Matched • HOHH: ${escapeHtml(zpMatch.hohh_name)} | GP: ${escapeHtml(zpMatch.gram_panchayat_name)} | Block: ${escapeHtml(zpMatch.block)}" class="zero-poverty-balloon inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold text-white shadow-sm select-none">
+            ? `<span title="Zero Poverty CDO Matched • HOHH: ${escapeHtml(zpMatch.hohh_name)} | Uncovered Family: ${escapeHtml(uncText)} | GP: ${escapeHtml(zpMatch.gram_panchayat_name)} | Block: ${escapeHtml(zpMatch.block)}" class="zero-poverty-balloon inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold text-white shadow-sm select-none">
                 <span class="balloon-float inline-block text-sm leading-none">🎈</span>
                 <span>Zero Poverty</span>
                 <span class="text-[10px] font-semibold bg-white/20 px-1.5 py-0.5 rounded-full">HOHH: ${escapeHtml(zpMatch.hohh_name)}</span>

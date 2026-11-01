@@ -29,10 +29,25 @@ async function fetchZeroPovertyForRecords(records) {
     phoneList.forEach(ph => zeroPovertyByPhoneCache.set(ph, []));
 
     try {
-        const { data, error } = await supabaseClient
+        let { data, error } = await supabaseClient
             .from('zero_poverty_cdo')
-            .select('sr_no, block, gram_panchayat_name, hohh_name, mobile_no, "अनाच्छादित_परिवार"')
+            .select('sr_no, block, gram_panchayat_name, hohh_name, mobile_no, uncovered_family')
             .in('mobile_no', phoneList);
+
+        if (error) {
+            // Graceful fallback if database column is still Hindi
+            const fallback = await supabaseClient
+                .from('zero_poverty_cdo')
+                .select('sr_no, block, gram_panchayat_name, hohh_name, mobile_no, "अनाच्छादित_परिवार"')
+                .in('mobile_no', phoneList);
+            if (!fallback.error && Array.isArray(fallback.data)) {
+                data = fallback.data.map(r => ({
+                    ...r,
+                    uncovered_family: r.uncovered_family || r['अनाच्छादित_परिवार']
+                }));
+                error = null;
+            }
+        }
 
         if (error || !Array.isArray(data)) return;
 
@@ -42,7 +57,10 @@ async function fetchZeroPovertyForRecords(records) {
             if (!zeroPovertyByPhoneCache.has(ph)) {
                 zeroPovertyByPhoneCache.set(ph, []);
             }
-            zeroPovertyByPhoneCache.get(ph).push(row);
+            zeroPovertyByPhoneCache.get(ph).push({
+                ...row,
+                uncovered_family: row.uncovered_family || row['अनाच्छादित_परिवार'] || 'Yes'
+            });
         });
     } catch (e) {
         console.warn('Zero Poverty lookup warning:', e);
