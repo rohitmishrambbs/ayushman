@@ -95,7 +95,7 @@ function formatGPOptionText(gpName, processedCount, totalCount, latestTimestamp)
     const total = Number(totalCount || 0);
     const dateStr = formatIstDateShort(latestTimestamp);
     if (dateStr) {
-        return `${gpName} (${count}/${total}) updated on ${dateStr}`;
+        return `${gpName} (${count}/${total}) last updated on ${dateStr}`;
     }
     return `${gpName} (${count}/${total})`;
 }

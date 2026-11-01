@@ -273,3 +273,12 @@ body {
 .balloon-float {
     animation: balloonBob 2.4s ease-in-out infinite;
 }
+
+
+/* Very small font size for Gram Panchayat dropdown and options */
+#gpSelector,
+#gpSelector option,
+#adminGpSelector,
+#adminGpSelector option {
+    font-size: 10.5px !important;
+}

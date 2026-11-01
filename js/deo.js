@@ -214,6 +214,7 @@ function renderGPOptions(gpSelect, block, data, preserveSelection, previousValue
             const total = Number(gp.total_members ?? 0);
             const opt = document.createElement('option');
             opt.value = gpName;
+            opt.style.fontSize = '10.5px';
             opt.innerText = formatGPOptionText(gpName, count, total, gp.latest_timestamp);
             gpSelect.appendChild(opt);
         });
