@@ -171,6 +171,17 @@ function generateMembersWorkbookAndDownload(data, fileName) {
     XLSX.writeFile(wb, fileName);
 }
 
+function handleTerminalExportSelect(selectEl) {
+    if (!selectEl || !selectEl.value) return;
+    const action = selectEl.value;
+    selectEl.value = "";
+    if (action === 'current_list') {
+        exportCampCallListExcel();
+    } else if (action === 'not_applied_gp') {
+        exportNotAppliedGpWiseExcel();
+    }
+}
+
 async function exportCampCallListExcel() {
     if (isExportInProgress) return;
 
@@ -181,12 +192,15 @@ async function exportCampCallListExcel() {
     const statusFilter = document.getElementById('statusFilter').value;
     const searchQuery = document.getElementById('searchInput').value.trim();
     const statusText = document.getElementById('syncStatusText');
-    const btnEl = document.getElementById('terminalExportBtn');
-    const originalBtnHtml = btnEl ? btnEl.innerHTML : '<span>Download List (.xlsx)</span>';
+    const selectEl = document.getElementById('terminalExportSelect');
+    const defaultLabel = 'Select Download';
 
     try {
         isExportInProgress = true;
-        if (btnEl) btnEl.disabled = true;
+        if (selectEl) {
+            selectEl.disabled = true;
+            if (selectEl.options[0]) selectEl.options[0].innerText = '⏳ Starting export...';
+        }
         statusText.innerText = "Preparing Excel (.xlsx)...";
         showToast("Preparing Excel file, please wait...", "info", 2000);
 
@@ -195,8 +209,8 @@ async function exportCampCallListExcel() {
             (fetched, total) => {
                 const pct = total > 0 ? Math.round((fetched / total) * 100) : 100;
                 statusText.innerText = `Fetching ${fetched.toLocaleString()} / ${total.toLocaleString()} (${pct}%)...`;
-                if (btnEl) {
-                    btnEl.innerText = `⏳ ${fetched.toLocaleString()} / ${total.toLocaleString()} (${pct}%)`;
+                if (selectEl && selectEl.options[0]) {
+                    selectEl.options[0].innerText = `⏳ ${pct}% (${fetched}/${total})`;
                 }
             }
         );
@@ -207,7 +221,9 @@ async function exportCampCallListExcel() {
             return;
         }
 
-        if (btnEl) btnEl.innerText = `⚙️ Building .xlsx (${data.length.toLocaleString()} rows)...`;
+        if (selectEl && selectEl.options[0]) {
+            selectEl.options[0].innerText = `⚙️ Building .xlsx (${data.length.toLocaleString()} rows)...`;
+        }
         const blockLabel = block === 'ALL' ? 'ALL_22_BLOCKS' : block.replace(/\s+/g, '_');
         const gpLabel = gp === 'ALL' ? 'AllGPs' : gp.replace(/\s+/g, '_');
         const statusLabel = statusFilter === 'ALL' ? 'AllStatuses' : statusFilter.replace(/\s+/g, '');
@@ -222,9 +238,197 @@ async function exportCampCallListExcel() {
         statusText.innerText = "Export Error";
     } finally {
         isExportInProgress = false;
-        if (btnEl) {
-            btnEl.disabled = false;
-            btnEl.innerHTML = originalBtnHtml;
+        if (selectEl) {
+            selectEl.disabled = false;
+            selectEl.value = "";
+            if (selectEl.options[0]) selectEl.options[0].innerText = defaultLabel;
+        }
+    }
+}
+
+async function exportNotAppliedGpWiseExcel() {
+    if (isExportInProgress) return;
+
+    const block = getAuthorizedBlock();
+    if (!block) return;
+
+    const gpSelect = document.getElementById('gpSelector');
+    const selectedGp = gpSelect ? gpSelect.value : 'ALL';
+    const statusText = document.getElementById('syncStatusText');
+    const selectEl = document.getElementById('terminalExportSelect');
+    const defaultLabel = 'Select Download';
+
+    try {
+        isExportInProgress = true;
+        if (selectEl) {
+            selectEl.disabled = true;
+            if (selectEl.options[0]) selectEl.options[0].innerText = '⏳ Starting export...';
+        }
+        statusText.innerText = "Preparing GP-wise Not Applied (.xlsx)...";
+        showToast("Preparing Not Applied members GP-wise Excel export...", "info", 2000);
+
+        const filterObj = {
+            block,
+            gp: selectedGp,
+            statusFilter: 'Not Applied',
+            searchQuery: ''
+        };
+
+        const data = await fetchAllMatchingRecordsPaginated(
+            filterObj,
+            (fetched, total) => {
+                const pct = total > 0 ? Math.round((fetched / total) * 100) : 100;
+                statusText.innerText = `Fetching Not Applied ${fetched.toLocaleString()} / ${total.toLocaleString()} (${pct}%)...`;
+                if (selectEl && selectEl.options[0]) {
+                    selectEl.options[0].innerText = `⏳ ${pct}% (${fetched}/${total})`;
+                }
+            }
+        );
+
+        if (!data || data.length === 0) {
+            showToast("No Not Applied records found for export.", "warning");
+            statusText.innerText = "✓ Synced with Cloud DB";
+            return;
+        }
+
+        if (selectEl && selectEl.options[0]) {
+            selectEl.options[0].innerText = `⚙️ Building .xlsx (${data.length.toLocaleString()} rows)...`;
+        }
+
+        // 1. Members Detail Sheet (sorted GP-wise -> Family ID -> Member ID)
+        data.sort((a, b) => {
+            const gpCmp = String(a.gram_panchayat_name ?? '').localeCompare(String(b.gram_panchayat_name ?? ''));
+            if (gpCmp !== 0) return gpCmp;
+            const famCmp = String(a.family_id ?? '').localeCompare(String(b.family_id ?? ''));
+            if (famCmp !== 0) return famCmp;
+            return String(a.member_id ?? '').localeCompare(String(b.member_id ?? ''));
+        });
+
+        const headers = [
+            "family_id",
+            "member_id",
+            "block_name",
+            "gram_panchayat_name",
+            "member_name",
+            "father_name",
+            "type",
+            "gender",
+            "date_of_birth",
+            "birth_year",
+            "mobile_no",
+            "STATUS",
+            "remark"
+        ];
+
+        const detailAoa = [headers];
+        const gpSummaryMap = new Map();
+
+        data.forEach(r => {
+            const rawMemId = String(r.member_id ?? '');
+            const isExtra = rawMemId.startsWith('EXTRA_');
+            const famNum = Number(String(r.family_id ?? '').replace(/\D/g, ''));
+            const memNum = isExtra ? NaN : Number(rawMemId.replace(/\D/g, ''));
+            const byNum = Number(String(r.birth_year ?? '').replace(/\D/g, ''));
+            const mobNum = Number(String(r.mobile_no ?? '').replace(/\D/g, ''));
+            const gpName = String(r.gram_panchayat_name ?? 'UNKNOWN').trim() || 'UNKNOWN';
+
+            detailAoa.push([
+                !isNaN(famNum) && famNum > 0 ? { t: 'n', v: famNum, z: '0' } : String(r.family_id ?? ''),
+                isExtra ? "" : (!isNaN(memNum) && memNum > 0 ? { t: 'n', v: memNum, z: '0' } : rawMemId),
+                String(r.block_name ?? ''),
+                gpName,
+                String(r.member_name ?? ''),
+                String(r.father_name ?? ''),
+                String(r.type ?? ''),
+                String(r.gender ?? ''),
+                String(r.date_of_birth ?? ''),
+                !isNaN(byNum) && byNum > 0 ? { t: 'n', v: byNum, z: '0' } : String(r.birth_year ?? ''),
+                !isNaN(mobNum) && mobNum > 0 ? { t: 'n', v: mobNum, z: '0' } : String(r.mobile_no ?? ''),
+                cleanStatus(r.STATUS),
+                cleanRemark(r.remark)
+            ]);
+
+            if (!gpSummaryMap.has(gpName)) {
+                gpSummaryMap.set(gpName, { count: 0, families: new Set() });
+            }
+            const gObj = gpSummaryMap.get(gpName);
+            gObj.count++;
+            if (r.family_id) gObj.families.add(String(r.family_id));
+        });
+
+        const detailWs = XLSX.utils.aoa_to_sheet(detailAoa);
+        detailWs['!cols'] = [
+            { wch: 16 }, // family_id
+            { wch: 18 }, // member_id
+            { wch: 16 }, // block_name
+            { wch: 24 }, // gram_panchayat_name
+            { wch: 22 }, // member_name
+            { wch: 22 }, // father_name
+            { wch: 14 }, // type
+            { wch: 8 },  // gender
+            { wch: 13 }, // date_of_birth
+            { wch: 11 }, // birth_year
+            { wch: 14 }, // mobile_no
+            { wch: 16 }, // STATUS
+            { wch: 32 }  // remark
+        ];
+
+        // 2. Summary Sheet
+        const sortedGps = Array.from(gpSummaryMap.keys()).sort((a, b) => a.localeCompare(b));
+        const summaryHeaders = ["S.No.", "Gram Panchayat Name", "Not Applied Members", "Total Families"];
+        const summaryAoa = [summaryHeaders];
+        let sumMembers = 0;
+        let sumFamilies = 0;
+
+        sortedGps.forEach((gp, idx) => {
+            const item = gpSummaryMap.get(gp);
+            sumMembers += item.count;
+            sumFamilies += item.families.size;
+            summaryAoa.push([
+                idx + 1,
+                gp,
+                { t: 'n', v: item.count, z: '0' },
+                { t: 'n', v: item.families.size, z: '0' }
+            ]);
+        });
+
+        summaryAoa.push([
+            "",
+            "TOTAL",
+            { t: 'n', v: sumMembers, z: '0' },
+            { t: 'n', v: sumFamilies, z: '0' }
+        ]);
+
+        const summaryWs = XLSX.utils.aoa_to_sheet(summaryAoa);
+        summaryWs['!cols'] = [
+            { wch: 8 },
+            { wch: 28 },
+            { wch: 22 },
+            { wch: 18 }
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, detailWs, "Not_Applied_Members");
+        XLSX.utils.book_append_sheet(wb, summaryWs, "GP_Summary");
+
+        const blockLabel = block === 'ALL' ? 'District' : block.replace(/\s+/g, '_');
+        const gpLabel = selectedGp === 'ALL' ? 'GP_Wise_All' : selectedGp.replace(/\s+/g, '_');
+        const filename = `BoCW_${blockLabel}_${gpLabel}_Not_Applied_Members.xlsx`;
+
+        XLSX.writeFile(wb, filename);
+
+        statusText.innerText = `✓ Exported ${data.length.toLocaleString()} Not Applied rows`;
+        showToast(`Downloaded ${filename} (${data.length.toLocaleString()} rows)!`, "success", 3500);
+    } catch (err) {
+        console.error("Not Applied export error:", err);
+        showToast(`Export failed: ${err.message}`, "error");
+        statusText.innerText = "Export Error";
+    } finally {
+        isExportInProgress = false;
+        if (selectEl) {
+            selectEl.disabled = false;
+            selectEl.value = "";
+            if (selectEl.options[0]) selectEl.options[0].innerText = defaultLabel;
         }
     }
 }
