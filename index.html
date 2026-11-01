@@ -240,41 +240,41 @@
         </div>
 
         <!-- Top Navigation Header -->
-        <header class="bg-slate-900/95 backdrop-blur-md text-white shadow-md sticky top-0 z-40 border-b border-slate-800">
+        <header class="bg-yellow-400 text-slate-900 shadow-md sticky top-0 z-40 border-b border-yellow-500/80">
             <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
                 <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
                     <div class="flex items-center gap-3">
-                        <div class="bg-gradient-to-tr from-indigo-600 to-indigo-500 px-3 py-1.5 rounded-xl font-black text-lg tracking-wider shadow-md shadow-indigo-500/30 ring-1 ring-white/15">
+                        <div class="bg-slate-950 text-yellow-400 px-3 py-1.5 rounded-xl font-black text-lg tracking-wider shadow-md ring-1 ring-black/20">
                             BoCW
                         </div>
                         <div class="flex flex-col">
-                            <div class="flex items-center gap-1.5 text-emerald-400 text-[10px] font-bold uppercase tracking-wider leading-none mb-0.5">
+                            <div class="flex items-center gap-1.5 text-emerald-950 text-[10px] font-black uppercase tracking-wider leading-none mb-0.5">
                                 <span class="relative flex h-2 w-2">
-                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-600 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-700"></span>
                                 </span>
                                 <span>Live</span>
                             </div>
-                            <h1 class="font-bold text-base leading-tight">Azamgarh</h1>
+                            <h1 class="font-black text-base leading-tight text-slate-950">Azamgarh</h1>
                         </div>
                     </div>
 
                     <!-- Mobile-only Logout button -->
-                    <button onclick="logoutPortalUser()" title="Sign out of portal" class="md:hidden px-3 py-1.5 bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-bold rounded-lg transition">
+                    <button onclick="logoutPortalUser()" title="Sign out of portal" class="md:hidden px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-sm transition">
                         Logout
                     </button>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
-                    <div id="modeSwitcherContainer" class="flex items-center bg-slate-800/90 border border-slate-700 rounded-xl p-1 shadow-inner">
-                        <span class="text-[11px] text-slate-400 px-2 font-bold uppercase tracking-wider">Mode:</span>
-                        <select id="roleSelector" onchange="switchRole(this.value)" class="bg-slate-900 text-white text-xs font-semibold rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                    <div id="modeSwitcherContainer" class="flex items-center bg-yellow-500/60 border border-yellow-600/40 rounded-xl p-1 shadow-inner">
+                        <span class="text-[11px] text-yellow-950 px-2 font-black uppercase tracking-wider">Mode:</span>
+                        <select id="roleSelector" onchange="switchRole(this.value)" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-slate-950 cursor-pointer shadow-sm transition">
                             <option value="deo">Block DEO Terminal</option>
                             <option value="admin">ACMO District Command (22 Blocks)</option>
                         </select>
                     </div>
 
-                    <div id="loggedInUserBadge" class="flex items-center gap-1.5 bg-indigo-950/80 border border-indigo-700/60 px-3 py-1.5 rounded-xl text-indigo-300 text-xs font-bold shadow-sm">
+                    <div id="loggedInUserBadge" class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-yellow-300 text-xs font-black shadow-sm">
                         <span>Authenticated</span>
                     </div>
 
@@ -282,7 +282,7 @@
                         <button
                             id="exportSummaryBtn"
                             onclick="exportNotAppliedGpWiseExcel()"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl border border-green-500 transition shadow-sm hover:shadow-green-600/30 active:scale-95 cursor-pointer"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-bold rounded-xl border border-slate-700 transition shadow-sm active:scale-95 cursor-pointer"
                             title="Download Block Summary of Not Applied & Total Members (.xlsx)"
                         >
                             <span>Block Summary (.xlsx)</span>
@@ -290,15 +290,15 @@
                         <button
                             id="exportListBtn"
                             onclick="exportCampCallListExcel()"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl border border-emerald-500 transition shadow-sm hover:shadow-emerald-600/30 active:scale-95 cursor-pointer"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-60 text-white text-xs font-bold rounded-xl border border-emerald-800 transition shadow-sm active:scale-95 cursor-pointer"
                             title="Download filtered verification list (.xlsx)"
                         >
                             <span>Download List (.xlsx)</span>
                         </button>
                     </div>
 
-                    <button onclick="logoutPortalUser()" title="Sign out of portal" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-bold rounded-xl transition shadow-sm hover:shadow-rose-600/30 active:scale-95 cursor-pointer">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <button onclick="logoutPortalUser()" title="Sign out of portal" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition shadow-sm hover:shadow-rose-600/30 active:scale-95 cursor-pointer">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
                         <span>Logout</span>

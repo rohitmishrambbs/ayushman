@@ -233,7 +233,7 @@ function configureBlockSelectorForSession(session) {
 
         if (modeSwitcher) modeSwitcher.classList.add('hidden');
         if (userBadge) {
-            userBadge.innerHTML = `<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-400"></span>🔒 DEO: ${session.assigned_block}</span>`;
+            userBadge.innerHTML = `<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span>🔒 DEO: ${session.assigned_block}</span>`;
         }
     } else {
         // Master Admin (ACMO) - Populate ALL 22 BLOCKS + individual blocks in both selectors
