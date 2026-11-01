@@ -268,17 +268,17 @@ body {
     box-shadow: 0 8px 16px -3px rgba(225, 29, 72, 0.5);
 }
 
-/* Zero Poverty CDO Balloon Badge - Yellow for 'No' Uncovered Family */
+/* Zero Poverty CDO Balloon Badge - Yellow when at least 1 member is Approved */
 .zero-poverty-balloon-yellow {
-    background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
-    box-shadow: 0 4px 12px -2px rgba(202, 138, 4, 0.45) !important;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.45) !important;
+    box-shadow: 0 4px 12px -2px rgba(217, 119, 6, 0.45) !important;
     color: #ffffff !important;
 }
 
 .zero-poverty-balloon-yellow:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 16px -3px rgba(202, 138, 4, 0.6) !important;
+    box-shadow: 0 8px 16px -3px rgba(217, 119, 6, 0.6) !important;
 }
 
 .balloon-float {
