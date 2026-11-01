@@ -320,21 +320,29 @@ function matchZeroPovertyFamily(fam) {
 function renderFamilyGroups(records, totalCount) {
     const container = document.getElementById('familyListContainer');
     const countLabel = document.getElementById('recordCount');
+    const isZeroPovertyOnly = (document.getElementById('statusFilter')?.value === 'ZERO_POVERTY');
 
     if (!records || records.length === 0) {
         container.innerHTML = `
             <div class="p-12 text-center text-slate-500 text-sm font-semibold flex flex-col items-center justify-center gap-2">
-                <span class="text-3xl">🔍</span>
-                <p class="text-slate-700 font-bold">No matching records found</p>
+                <span class="text-3xl">${isZeroPovertyOnly ? '🎈' : '🔍'}</span>
+                <p class="text-slate-700 font-bold">${isZeroPovertyOnly ? 'No Zero Poverty records found' : 'No matching records found'}</p>
                 <p class="text-xs text-slate-400 font-normal">Try adjusting your search terms or filters to find beneficiaries.</p>
             </div>
         `;
-        countLabel.innerText = "0 Members";
+        countLabel.innerText = isZeroPovertyOnly ? "0 Zero Poverty Members" : "0 Members";
         return;
     }
 
     const familiesMap = new Map();
     records.forEach(rec => {
+        const memId = String(rec.member_id ?? '');
+        const isExtra = memId.startsWith('EXTRA_');
+        // When Zero Poverty filter is selected, show only official Zero Poverty baseline members
+        if (isZeroPovertyOnly && isExtra) {
+            return;
+        }
+
         const famId = String(rec.family_id ?? 'UNKNOWN');
         if (!familiesMap.has(famId)) {
             familiesMap.set(famId, {
@@ -348,12 +356,24 @@ function renderFamilyGroups(records, totalCount) {
         familiesMap.get(famId).members.push(rec);
     });
 
-    countLabel.innerText = `${records.length} of ${totalCount.toLocaleString()} Members (${familiesMap.size} Families on Page ${currentPage})`;
-
     const isDistrictWide = getAuthorizedBlock() === 'ALL';
     const cardsHtml = [];
+    let displayedFamiliesCount = 0;
+    let displayedMembersCount = 0;
 
     familiesMap.forEach(fam => {
+        if (!fam.members || fam.members.length === 0) return;
+
+        const zpMatch = matchZeroPovertyFamily(fam);
+
+        // When Zero Poverty status filter is active, show ONLY verified Zero Poverty families
+        if (isZeroPovertyOnly && !zpMatch) {
+            return;
+        }
+
+        displayedFamiliesCount++;
+        displayedMembersCount += fam.members.length;
+
         const cleanPhone = fam.mobile_no.replace(/\D/g, '');
         const safeBlock = escapeJsSingleQuote(fam.block_name);
         const safeGp = escapeJsSingleQuote(fam.gp_name);
@@ -364,7 +384,6 @@ function renderFamilyGroups(records, totalCount) {
             ? `<span class="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 border border-indigo-300 text-xs font-bold px-2.5 py-1.5 rounded-xl">Block: ${escapeHtml(fam.block_name)}</span>`
             : '';
 
-        const zpMatch = matchZeroPovertyFamily(fam);
         const zeroPovertyBalloonHtml = zpMatch
             ? `<span title="Zero Poverty CDO Matched • HOHH: ${escapeHtml(zpMatch.hohh_name)} | GP: ${escapeHtml(zpMatch.gram_panchayat_name)} | Block: ${escapeHtml(zpMatch.block)}" class="zero-poverty-balloon inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold text-white shadow-sm select-none">
                 <span class="balloon-float inline-block text-sm leading-none">🎈</span>
@@ -490,6 +509,25 @@ function renderFamilyGroups(records, totalCount) {
         `;
         cardsHtml.push(cardHtml);
     });
+
+    if (displayedFamiliesCount === 0) {
+        container.innerHTML = `
+            <div class="p-12 text-center text-slate-500 text-sm font-semibold flex flex-col items-center justify-center gap-2">
+                <span class="text-4xl">🎈</span>
+                <p class="text-slate-800 font-bold text-base">No Zero Poverty Families Found</p>
+                <p class="text-xs text-slate-400 font-normal">No families matching the Zero Poverty CDO dataset were found for the selected filters.</p>
+            </div>
+        `;
+        countLabel.innerText = "0 Zero Poverty Families";
+        return;
+    }
+
+    if (isZeroPovertyOnly) {
+        countLabel.innerText = `🎈 ${displayedFamiliesCount} Zero Poverty Families (${displayedMembersCount} Members on Page ${currentPage})`;
+    } else {
+        countLabel.innerText = `${records.length} of ${totalCount.toLocaleString()} Members (${displayedFamiliesCount} Families on Page ${currentPage})`;
+    }
+
     container.innerHTML = cardsHtml.join('');
 }
 
