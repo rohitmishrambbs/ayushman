@@ -91,7 +91,7 @@ function formatIstDateShort(isoStr) {
 }
 
 function toBoldSansText(str) {
-    if (!str) return '';
+    if (!str && str !== 0) return '';
     return String(str).replace(/[A-Za-z0-9]/g, c => {
         const code = c.charCodeAt(0);
         if (code >= 65 && code <= 90) return String.fromCodePoint(0x1D5D4 + code - 65);
@@ -106,10 +106,11 @@ function formatGPOptionText(gpName, processedCount, totalCount, latestTimestamp)
     const total = Number(totalCount || 0);
     const dateStr = formatIstDateShort(latestTimestamp);
     const boldGpName = toBoldSansText(gpName);
+    const boldRatio = `(${toBoldSansText(count)}/${toBoldSansText(total)})`;
     if (dateStr) {
-        return `${boldGpName} (${count}/${total}) last updated on ${dateStr}`;
+        return `${boldGpName} ${boldRatio} last updated on ${dateStr}`;
     }
-    return `${boldGpName} (${count}/${total})`;
+    return `${boldGpName} ${boldRatio}`;
 }
 
 const COPIED_MARKER = '[COPIED]';
