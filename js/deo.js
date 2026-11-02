@@ -637,6 +637,14 @@ function renderSummaryBarFromLeaderboard(authorizedBlock) {
             <span class="font-black text-rose-900 text-sm font-mono block mt-0.5">${Number(row.not_traceable_members || 0).toLocaleString()}</span>
         </div>
 
+        <div onclick="quickFilterStatus('EXTRA_ONLY')" title="Click to filter Extra Added" class="summary-stat-box bg-indigo-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'EXTRA_ONLY' ? 'ring-2 ring-indigo-600 border-indigo-400' : 'border-indigo-200'}">
+            <div class="flex items-center justify-between">
+                <span class="block text-indigo-800 font-bold uppercase text-[9.5px]">+ Extra Added</span>
+                <span class="text-[11px] text-indigo-600">✨</span>
+            </div>
+            <span class="font-black text-indigo-900 text-sm font-mono block mt-0.5">+${extraTotal.toLocaleString()}</span>
+        </div>
+
         <div onclick="quickFilterStatus('UNCOVERED_FAMILY')" title="Click to filter Uncovered Families (0 Approved Members)" class="summary-stat-box bg-orange-50/80 px-2.5 py-2 rounded-lg border ${currentFilter === 'UNCOVERED_FAMILY' ? 'ring-2 ring-orange-600 border-orange-400' : 'border-orange-200'}">
             <div class="flex items-center justify-between">
                 <span class="block text-orange-800 font-bold uppercase text-[9.5px]">Uncovered Family</span>
