@@ -104,9 +104,8 @@ function toBoldSansText(str) {
 function formatGPOptionText(gpName, processedCount, totalCount, latestTimestamp = null) {
     const count = Number(processedCount || 0);
     const total = Number(totalCount || 0);
-    const boldGpName = toBoldSansText(gpName);
-    const boldRatio = `(${toBoldSansText(count)}/${toBoldSansText(total)})`;
-    return `${boldGpName} ${boldRatio}`;
+    const cleanGpName = String(gpName ?? '').trim();
+    return `${cleanGpName} (${count}/${total})`;
 }
 
 const COPIED_MARKER = '[COPIED]';
