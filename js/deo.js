@@ -258,15 +258,33 @@ async function loadBlockData() {
     const titleEl = document.getElementById('activeBlockTitle');
     if (titleEl) titleEl.innerText = `${displayBlockTitle} Block Terminal`;
 
-    const gp = document.getElementById('gpSelector').value;
-    const statusFilter = document.getElementById('statusFilter').value;
-    const searchQuery = document.getElementById('searchInput').value.trim();
+    const gp = document.getElementById('gpSelector') ? document.getElementById('gpSelector').value : 'ALL';
+    const statusFilter = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : 'ALL';
+    const searchQuery = document.getElementById('searchInput') ? document.getElementById('searchInput').value.trim() : '';
     const container = document.getElementById('familyListContainer');
     const statusText = document.getElementById('syncStatusText');
+    const verificationSection = document.getElementById('verificationListSection');
+    const noGpNotice = document.getElementById('noGpSelectedNotice');
+
+    // Keep live block summary bar updated regardless of selection
+    updateBlockSummaryBar(block);
+
+    // If no GP is selected and no search query, do NOT show verification list
+    if ((!gp || gp === 'ALL') && !searchQuery) {
+        if (verificationSection) verificationSection.classList.add('hidden');
+        if (noGpNotice) noGpNotice.classList.remove('hidden');
+        if (statusText) statusText.innerText = "Select a Gram Panchayat";
+        currentLoadedRecords = [];
+        currentTotalCount = 0;
+        return;
+    }
+
+    if (verificationSection) verificationSection.classList.remove('hidden');
+    if (noGpNotice) noGpNotice.classList.add('hidden');
 
     try {
         if (statusText) statusText.innerText = "Fetching Cloud Data...";
-        container.innerHTML = renderSkeletonLoader();
+        if (container) container.innerHTML = renderSkeletonLoader();
 
         // Fingerprint check: only run expensive count: 'exact' when filters change
         const currentFingerprint = `${block}__${gp}__${statusFilter}__${searchQuery}`;
@@ -371,9 +389,14 @@ function quickFilterStatus(statusVal) {
     const statusSelect = document.getElementById('statusFilter');
     if (!statusSelect) return;
     statusSelect.value = statusVal;
-    resetPageAndLoad();
     const filterLabel = statusVal === 'ALL' ? 'All Statuses' : (statusVal === 'UNCOVERED_FAMILY' ? 'Uncovered Family' : (statusVal === 'EXTRA_ONLY' ? 'Extra Added Only' : statusVal));
-    showToast(`Filtering by: ${filterLabel}`, 'info', 2000);
+    const gp = document.getElementById('gpSelector')?.value;
+    if (!gp || gp === 'ALL') {
+        showToast(`Filter set to: ${filterLabel}. Select a GP to view list.`, 'info', 2500);
+    } else {
+        showToast(`Filtering by: ${filterLabel}`, 'info', 2000);
+    }
+    resetPageAndLoad();
 }
 
 function applyLocalStatusDelta(block, oldStatus, newStatus, delta = 1) {
