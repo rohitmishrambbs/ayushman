@@ -132,6 +132,7 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
 
     data.forEach(gp => {
         const gpName = String(gp.gram_panchayat_name ?? '').trim();
+        gp.gram_panchayat_name = gpName;
         const stObj = gpStatsMap.get(gpName);
         if (stObj) {
             gp.total_members = Number(gp.total_members || stObj.total_members);
@@ -354,7 +355,7 @@ function quickFilterStatus(statusVal) {
     if (!statusSelect) return;
     statusSelect.value = statusVal;
     resetPageAndLoad();
-    const filterLabel = statusVal === 'ALL' ? 'All Statuses' : (statusVal === 'UNCOVERED_FAMILY' ? 'Uncovered Family' : statusVal);
+    const filterLabel = statusVal === 'ALL' ? 'All Statuses' : (statusVal === 'UNCOVERED_FAMILY' ? 'Uncovered Family' : (statusVal === 'EXTRA_ONLY' ? 'Extra Added Only' : statusVal));
     showToast(`Filtering by: ${filterLabel}`, 'info', 2000);
 }
 
@@ -488,10 +489,41 @@ function renderSummaryBarFromLeaderboard(authorizedBlock) {
     if (authorizedBlock !== 'ALL' && selectedGp && selectedGp !== 'ALL' && gpCacheByBlock && gpCacheByBlock.has(authorizedBlock)) {
         const gps = gpCacheByBlock.get(authorizedBlock);
         if (Array.isArray(gps)) {
-            row = gps.find(g => g.gram_panchayat_name === selectedGp) || null;
+            const cleanSelected = String(selectedGp ?? '').trim().toUpperCase();
+            row = gps.find(g => String(g.gram_panchayat_name ?? '').trim().toUpperCase() === cleanSelected) || null;
         }
     } else if (authorizedBlock !== 'ALL' && gpCacheByBlock && gpCacheByBlock.has(authorizedBlock)) {
         // Aggregate block metrics directly from cached GP rows without full district RPC
+        const gps = gpCacheByBlock.get(authorizedBlock);
+        if (Array.isArray(gps) && gps.length > 0) {
+            row = gps.reduce((acc, g) => {
+                acc.total_members += Number(g.total_members || 0);
+                acc.total_families += Number(g.total_families || 0);
+                acc.approved_members += Number(g.approved_members || 0);
+                acc.pending_members += Number(g.pending_members || 0);
+                acc.not_applied_members += Number(g.not_applied_members || 0);
+                acc.unidentified_members += Number(g.unidentified_members || 0);
+                acc.no_record_members += Number(g.no_record_members || 0);
+                acc.not_traceable_members += Number(g.not_traceable_members || 0);
+                acc.extra_added_members += Number(g.extra_added_members || 0);
+                return acc;
+            }, {
+                total_members: 0,
+                total_families: gps.block_total_families || 0,
+                approved_members: 0,
+                pending_members: 0,
+                not_applied_members: 0,
+                unidentified_members: 0,
+                no_record_members: 0,
+                not_traceable_members: 0,
+                extra_added_members: 0,
+                uncovered_families: gps.block_uncovered_families || 0
+            });
+        }
+    }
+
+    if (!row && authorizedBlock !== 'ALL' && gpCacheByBlock && gpCacheByBlock.has(authorizedBlock)) {
+        // Fallback: If selected GP was not found by exact string, aggregate block so summary bar always renders
         const gps = gpCacheByBlock.get(authorizedBlock);
         if (Array.isArray(gps) && gps.length > 0) {
             row = gps.reduce((acc, g) => {
