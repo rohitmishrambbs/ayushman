@@ -101,15 +101,11 @@ function toBoldSansText(str) {
     });
 }
 
-function formatGPOptionText(gpName, processedCount, totalCount, latestTimestamp) {
+function formatGPOptionText(gpName, processedCount, totalCount, latestTimestamp = null) {
     const count = Number(processedCount || 0);
     const total = Number(totalCount || 0);
-    const dateStr = formatIstDateShort(latestTimestamp);
     const boldGpName = toBoldSansText(gpName);
     const boldRatio = `(${toBoldSansText(count)}/${toBoldSansText(total)})`;
-    if (dateStr) {
-        return `${boldGpName} ${boldRatio} last updated on ${dateStr}`;
-    }
     return `${boldGpName} ${boldRatio}`;
 }
 
