@@ -64,10 +64,8 @@ function switchRole(role) {
         document.getElementById('adminView').classList.add('hidden');
         document.getElementById('deoView').classList.remove('hidden');
         if (exportBtn) exportBtn.classList.remove('hidden');
-        if (!currentLoadedRecords || currentLoadedRecords.length === 0) {
-            loadGPDropdown();
-            loadBlockData();
-        }
+        loadGPDropdown();
+        loadBlockData();
     }
 }
 
