@@ -138,6 +138,7 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
             gp.total_members = Number(gp.total_members || stObj.total_members);
             gp.total_families = stObj.families.size;
             gp.uncovered_families = Math.max(0, stObj.families.size - stObj.approved_families.size);
+            gp.uncovered_family_ids = Array.from(stObj.families).filter(id => !stObj.approved_families.has(id));
             gp.approved_members = stObj.approved_members;
             gp.pending_members = stObj.pending_members;
             gp.not_applied_members = stObj.not_applied_members;
@@ -159,6 +160,7 @@ async function fetchBlockGpsData(block, forceRefresh = false) {
             gp.no_record_members = 0;
             gp.not_traceable_members = 0;
             gp.extra_added_members = 0;
+            gp.uncovered_family_ids = [];
             gp.processed_members = fallbackApp;
             gp.latest_timestamp = null;
         }
@@ -289,16 +291,32 @@ async function loadBlockData() {
             currentCoveredFamSet = await getCoveredFamilyIds(block, gp);
             const coveredFamIds = Array.from(currentCoveredFamSet);
 
-            if (coveredFamIds.length > 0 && coveredFamIds.length <= 200) {
-                query = query.not('family_id', 'in', `(${coveredFamIds.join(',')})`);
-            } else if (coveredFamIds.length > 200) {
-                const blockGps = gpCacheByBlock && gpCacheByBlock.get(block);
-                const uncovIds = blockGps && blockGps.block_uncovered_family_ids;
-                if (uncovIds && uncovIds.length > 0 && uncovIds.length <= 200) {
+            // Determine uncovered family IDs for this view
+            const blockGps = gpCacheByBlock && gpCacheByBlock.get(block);
+            let uncovIds = null;
+            if (gp !== 'ALL' && Array.isArray(blockGps)) {
+                const cleanGp = String(gp).trim().toUpperCase();
+                const gpObj = blockGps.find(g => String(g.gram_panchayat_name ?? '').trim().toUpperCase() === cleanGp);
+                if (gpObj && Array.isArray(gpObj.uncovered_family_ids)) {
+                    uncovIds = gpObj.uncovered_family_ids;
+                }
+            } else if (blockGps && Array.isArray(blockGps.block_uncovered_family_ids)) {
+                uncovIds = blockGps.block_uncovered_family_ids;
+            }
+
+            if (uncovIds && uncovIds.length > 0) {
+                if (uncovIds.length <= 150) {
                     query = query.in('family_id', uncovIds);
                 } else {
-                    query = query.or('STATUS.is.null,STATUS.neq.Approved');
+                    // Page directly by family IDs to ensure every returned record belongs to an uncovered family
+                    const famPageSize = 25;
+                    const pageFamIds = uncovIds.slice((currentPage - 1) * famPageSize, currentPage * famPageSize);
+                    query = query.in('family_id', pageFamIds.length > 0 ? pageFamIds : ['__NONE__']);
                 }
+            } else if (coveredFamIds.length > 0 && coveredFamIds.length <= 200) {
+                query = query.not('family_id', 'in', `(${coveredFamIds.join(',')})`);
+            } else {
+                query = query.or('STATUS.is.null,STATUS.neq.Approved');
             }
         } else if (statusFilter !== 'ALL') {
             if (statusFilter === 'EXTRA_ONLY') {
@@ -398,7 +416,8 @@ function applyLocalGpApprovalDelta(block, gpName, oldStatus, newStatus, delta = 
 
     const gps = gpCacheByBlock.get(block);
     if (!Array.isArray(gps)) return;
-    const gpEntry = gps.find(g => g.gram_panchayat_name === gpName);
+    const cleanGpName = String(gpName ?? '').trim().toUpperCase();
+    const gpEntry = gps.find(g => String(g.gram_panchayat_name ?? '').trim().toUpperCase() === cleanGpName);
     if (gpEntry) {
         const oldField = mapStatusToField(cleanOld);
         const newField = mapStatusToField(cleanNew);
@@ -435,7 +454,7 @@ function applyLocalGpApprovalDelta(block, gpName, oldStatus, newStatus, delta = 
 
         const gpSelect = document.getElementById('gpSelector');
         if (gpSelect) {
-            const opt = Array.from(gpSelect.options).find(o => o.value === gpName);
+            const opt = Array.from(gpSelect.options).find(o => String(o.value ?? '').trim().toUpperCase() === cleanGpName);
             if (opt) {
                 const count = Number(gpEntry.processed_members ?? gpEntry.approved_members ?? 0);
                 const total = Number(gpEntry.total_members ?? 0);
@@ -755,7 +774,8 @@ async function confirmAddMember() {
         // Live update GP cache & dropdown counter on member addition
         if (gpCacheByBlock && gpCacheByBlock.has(targetBlock) && targetGp) {
             const gps = gpCacheByBlock.get(targetBlock);
-            const gpEntry = gps && gps.find(g => g.gram_panchayat_name === targetGp);
+            const cleanTarget = String(targetGp ?? '').trim().toUpperCase();
+            const gpEntry = gps && gps.find(g => String(g.gram_panchayat_name ?? '').trim().toUpperCase() === cleanTarget);
             if (gpEntry) {
                 gpEntry.extra_added_members = Number(gpEntry.extra_added_members || 0) + 1;
                 let field = 'not_applied_members';
@@ -771,7 +791,7 @@ async function confirmAddMember() {
                 }
                 const gpSelect = document.getElementById('gpSelector');
                 if (gpSelect) {
-                    const opt = Array.from(gpSelect.options).find(o => o.value === targetGp);
+                    const opt = Array.from(gpSelect.options).find(o => String(o.value ?? '').trim().toUpperCase() === cleanTarget);
                     if (opt) {
                         const count = Number(gpEntry.processed_members ?? gpEntry.approved_members ?? 0);
                         const total = Number(gpEntry.total_members ?? 0);
@@ -835,7 +855,8 @@ async function deleteExtraMember(internalMemberId, memberName) {
             const st = cleanStatus(deletedRec.STATUS);
             if (gpCacheByBlock.has(blkName) && gpName) {
                 const gps = gpCacheByBlock.get(blkName);
-                const gpEntry = gps && gps.find(g => g.gram_panchayat_name === gpName);
+                const cleanGp = String(gpName ?? '').trim().toUpperCase();
+                const gpEntry = gps && gps.find(g => String(g.gram_panchayat_name ?? '').trim().toUpperCase() === cleanGp);
                 if (gpEntry) {
                     gpEntry.extra_added_members = Math.max(0, Number(gpEntry.extra_added_members || 0) - 1);
                     let field = 'not_applied_members';
@@ -850,7 +871,7 @@ async function deleteExtraMember(internalMemberId, memberName) {
                     }
                     const gpSelect = document.getElementById('gpSelector');
                     if (gpSelect) {
-                        const opt = Array.from(gpSelect.options).find(o => o.value === gpName);
+                        const opt = Array.from(gpSelect.options).find(o => String(o.value ?? '').trim().toUpperCase() === cleanGp);
                         if (opt) {
                             const count = Number(gpEntry.processed_members ?? gpEntry.approved_members ?? 0);
                             const total = Number(gpEntry.total_members ?? 0);

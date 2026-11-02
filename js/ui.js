@@ -217,7 +217,9 @@ function renderFamilyGroups(records, totalCount, coveredFamSet = null) {
 
     familiesMap.forEach(fam => {
         const famIdStr = String(fam.family_id ?? '');
-        const hasApproved = fam.members.some(m => cleanStatus(m.STATUS) === 'Approved') || (coveredFamSet && coveredFamSet.has(famIdStr));
+        const authBlock = (typeof getAuthorizedBlock === 'function') ? getAuthorizedBlock() : 'ALL';
+        const activeCoveredSet = coveredFamSet || (typeof coveredFamilyIdsCache !== 'undefined' && coveredFamilyIdsCache ? (coveredFamilyIdsCache.get(`${fam.block_name || authBlock}__${fam.gp_name}`) || coveredFamilyIdsCache.get(`${fam.block_name || authBlock}__ALL`)) : null);
+        const hasApproved = fam.members.some(m => cleanStatus(m.STATUS) === 'Approved') || (activeCoveredSet && activeCoveredSet.has(famIdStr));
         const isUncovered = !hasApproved;
 
         // When Uncovered Family status filter is active, show ONLY families with 0 approved members

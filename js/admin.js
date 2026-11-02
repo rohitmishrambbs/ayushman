@@ -781,16 +781,25 @@ async function updateAdminFilterMatchCount() {
             } else if (statusFilter === 'UNCOVERED_FAMILY') {
                 const coveredFamSet = await getCoveredFamilyIds(block, gp);
                 const coveredFamIds = Array.from(coveredFamSet);
-                if (coveredFamIds.length > 0 && coveredFamIds.length <= 200) {
-                    query = query.not('family_id', 'in', `(${coveredFamIds.join(',')})`);
-                } else if (coveredFamIds.length > 200) {
-                    const blockGps = gpCacheByBlock && gpCacheByBlock.get(block);
-                    const uncovIds = blockGps && blockGps.block_uncovered_family_ids;
-                    if (uncovIds && uncovIds.length > 0 && uncovIds.length <= 200) {
-                        query = query.in('family_id', uncovIds);
-                    } else {
-                        query = query.or('STATUS.is.null,STATUS.neq.Approved');
+
+                const blockGps = gpCacheByBlock && gpCacheByBlock.get(block);
+                let uncovIds = null;
+                if (gp !== 'ALL' && Array.isArray(blockGps)) {
+                    const cleanGp = String(gp).trim().toUpperCase();
+                    const gpObj = blockGps.find(g => String(g.gram_panchayat_name ?? '').trim().toUpperCase() === cleanGp);
+                    if (gpObj && Array.isArray(gpObj.uncovered_family_ids)) {
+                        uncovIds = gpObj.uncovered_family_ids;
                     }
+                } else if (blockGps && Array.isArray(blockGps.block_uncovered_family_ids)) {
+                    uncovIds = blockGps.block_uncovered_family_ids;
+                }
+
+                if (uncovIds && uncovIds.length > 0 && uncovIds.length <= 200) {
+                    query = query.in('family_id', uncovIds);
+                } else if (coveredFamIds.length > 0 && coveredFamIds.length <= 200) {
+                    query = query.not('family_id', 'in', `(${coveredFamIds.join(',')})`);
+                } else {
+                    query = query.or('STATUS.is.null,STATUS.neq.Approved');
                 }
             } else if (statusFilter === 'Not Applied') {
                 query = query.or('STATUS.is.null,STATUS.eq.Not Applied,STATUS.eq.Unidentified,STATUS.eq.NULL,STATUS.eq.');
