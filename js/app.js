@@ -39,10 +39,8 @@ async function initializeAuthenticatedApp() {
         document.getElementById('deoView').classList.remove('hidden');
         document.getElementById('adminView').classList.add('hidden');
         if (exportBtn) exportBtn.classList.remove('hidden');
-        await Promise.all([
-            loadGPDropdown(),
-            loadBlockData()
-        ]);
+        await loadGPDropdown();
+        await loadBlockData();
     }
 }
 
@@ -64,8 +62,7 @@ function switchRole(role) {
         document.getElementById('adminView').classList.add('hidden');
         document.getElementById('deoView').classList.remove('hidden');
         if (exportBtn) exportBtn.classList.remove('hidden');
-        loadGPDropdown();
-        loadBlockData();
+        loadGPDropdown().then(() => loadBlockData());
     }
 }
 
@@ -81,10 +78,8 @@ async function onBlockChange() {
     if (clearBtn) clearBtn.classList.add('hidden');
 
     currentPage = 1;
-    await Promise.all([
-        loadGPDropdown(),
-        loadBlockData()
-    ]);
+    await loadGPDropdown();
+    await loadBlockData();
 }
 
 function resetPageAndLoad() {

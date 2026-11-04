@@ -38,7 +38,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- Custom Stylesheet -->
-    <link rel="stylesheet" href="css/styles.css?v=3.4">
+    <link rel="stylesheet" href="css/styles.css?v=3.5">
 </head>
 <body class="bg-slate-50/80 text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
 
@@ -327,9 +327,7 @@
 
                         <div class="lg:col-span-3">
                             <label class="block text-[11px] font-bold text-slate-700 mb-1 uppercase tracking-wide">2. Gram Panchayat (GP)</label>
-                            <select id="gpSelector" onchange="resetPageAndLoad()" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-sm">
-                                <option value="ALL">Select Gram Panchayat</option>
-                            </select>
+                            <select id="gpSelector" onchange="resetPageAndLoad()" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-sm"></select>
                         </div>
 
                         <div class="lg:col-span-2">
@@ -395,7 +393,7 @@
                 </div>
 
                 <!-- Notice shown when no GP is selected -->
-                <div id="noGpSelectedNotice" class="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-12 text-center flex flex-col items-center justify-center gap-2.5">
+                <div id="noGpSelectedNotice" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200/90 p-12 text-center flex flex-col items-center justify-center gap-2.5">
                     <div class="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-2xl shadow-2xs">
                         🏛️
                     </div>
@@ -404,7 +402,7 @@
                 </div>
 
                 <!-- Family & Member List -->
-                <div id="verificationListSection" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden">
+                <div id="verificationListSection" class="bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden">
                     <div class="px-5 py-3 border-b border-slate-200/90 flex items-center justify-between gap-3 bg-slate-50/75">
                         <div class="flex items-center gap-2.5">
                             <h3 class="font-bold text-slate-800 text-sm">Verification List</h3>
@@ -908,13 +906,13 @@
     </div>
 
     <!-- Application Scripts (Segregated by Responsibility) -->
-    <script src="js/config.js?v=3.4"></script>
-    <script src="js/state.js?v=3.4"></script>
-    <script src="js/auth.js?v=3.4"></script>
-    <script src="js/ui.js?v=3.4"></script>
-    <script src="js/deo.js?v=3.4"></script>
-    <script src="js/admin.js?v=3.4"></script>
-    <script src="js/export.js?v=3.4"></script>
-    <script src="js/app.js?v=3.4"></script>
+    <script src="js/config.js?v=3.5"></script>
+    <script src="js/state.js?v=3.5"></script>
+    <script src="js/auth.js?v=3.5"></script>
+    <script src="js/ui.js?v=3.5"></script>
+    <script src="js/deo.js?v=3.5"></script>
+    <script src="js/admin.js?v=3.5"></script>
+    <script src="js/export.js?v=3.5"></script>
+    <script src="js/app.js?v=3.5"></script>
 </body>
 </html>

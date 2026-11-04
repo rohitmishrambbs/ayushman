@@ -189,10 +189,10 @@ async function loadGPDropdown(preserveSelection = false, forceRefresh = false) {
     const gpSelect = document.getElementById('gpSelector');
     if (!gpSelect) return;
 
-    const previousValue = preserveSelection ? gpSelect.value : 'ALL';
+    const previousValue = preserveSelection ? gpSelect.value : null;
 
     if (block === 'ALL') {
-        gpSelect.innerHTML = `<option value="ALL">Select Gram Panchayat</option>`;
+        gpSelect.innerHTML = '';
         return;
     }
 
@@ -204,7 +204,7 @@ async function loadGPDropdown(preserveSelection = false, forceRefresh = false) {
     }
 
     if (!preserveSelection) {
-        gpSelect.innerHTML = `<option value="ALL">Loading GPs for ${block}...</option>`;
+        gpSelect.innerHTML = `<option disabled>Loading GPs for ${block}...</option>`;
     }
 
     try {
@@ -212,13 +212,13 @@ async function loadGPDropdown(preserveSelection = false, forceRefresh = false) {
         renderGPOptions(gpSelect, block, data, preserveSelection, previousValue);
     } catch (err) {
         if (!preserveSelection) {
-            gpSelect.innerHTML = `<option value="ALL">Select Gram Panchayat</option>`;
+            gpSelect.innerHTML = '';
         }
     }
 }
 
 function renderGPOptions(gpSelect, block, data, preserveSelection, previousValue) {
-    gpSelect.innerHTML = `<option value="ALL">Select Gram Panchayat</option>`;
+    gpSelect.innerHTML = '';
     if (data && data.length > 0) {
         data.forEach(gp => {
             const gpName = String(gp.gram_panchayat_name ?? '');
@@ -231,9 +231,15 @@ function renderGPOptions(gpSelect, block, data, preserveSelection, previousValue
         });
     }
 
-    if (preserveSelection && previousValue) {
+    if (preserveSelection && previousValue && previousValue !== 'ALL') {
         const exists = Array.from(gpSelect.options).some(o => o.value === previousValue);
-        gpSelect.value = exists ? previousValue : 'ALL';
+        if (exists) {
+            gpSelect.value = previousValue;
+        } else if (gpSelect.options.length > 0) {
+            gpSelect.selectedIndex = 0;
+        }
+    } else if (gpSelect.options.length > 0) {
+        gpSelect.selectedIndex = 0;
     }
 }
 
@@ -258,7 +264,7 @@ async function loadBlockData() {
     const titleEl = document.getElementById('activeBlockTitle');
     if (titleEl) titleEl.innerText = `${displayBlockTitle} Block Terminal`;
 
-    const gp = document.getElementById('gpSelector') ? document.getElementById('gpSelector').value : 'ALL';
+    const gp = document.getElementById('gpSelector')?.value || 'ALL';
     const statusFilter = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : 'ALL';
     const searchQuery = document.getElementById('searchInput') ? document.getElementById('searchInput').value.trim() : '';
     const container = document.getElementById('familyListContainer');
@@ -268,16 +274,6 @@ async function loadBlockData() {
 
     // Keep live block summary bar updated regardless of selection
     updateBlockSummaryBar(block);
-
-    // If no GP is selected and no search query, do NOT show verification list
-    if ((!gp || gp === 'ALL') && !searchQuery) {
-        if (verificationSection) verificationSection.classList.add('hidden');
-        if (noGpNotice) noGpNotice.classList.remove('hidden');
-        if (statusText) statusText.innerText = "Select a Gram Panchayat";
-        currentLoadedRecords = [];
-        currentTotalCount = 0;
-        return;
-    }
 
     if (verificationSection) verificationSection.classList.remove('hidden');
     if (noGpNotice) noGpNotice.classList.add('hidden');
@@ -390,12 +386,7 @@ function quickFilterStatus(statusVal) {
     if (!statusSelect) return;
     statusSelect.value = statusVal;
     const filterLabel = statusVal === 'ALL' ? 'All Statuses' : (statusVal === 'UNCOVERED_FAMILY' ? 'Uncovered Family' : (statusVal === 'EXTRA_ONLY' ? 'Extra Added Only' : statusVal));
-    const gp = document.getElementById('gpSelector')?.value;
-    if (!gp || gp === 'ALL') {
-        showToast(`Filter set to: ${filterLabel}. Select a GP to view list.`, 'info', 2500);
-    } else {
-        showToast(`Filtering by: ${filterLabel}`, 'info', 2000);
-    }
+    showToast(`Filtering by: ${filterLabel}`, 'info', 2000);
     resetPageAndLoad();
 }
 

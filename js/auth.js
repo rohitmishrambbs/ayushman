@@ -191,7 +191,7 @@ function logoutPortalUser() {
     const statusFilter = document.getElementById('statusFilter');
     if (statusFilter) statusFilter.value = 'ALL';
     const gpSelect = document.getElementById('gpSelector');
-    if (gpSelect) gpSelect.innerHTML = '<option value="ALL">Select Gram Panchayat</option>';
+    if (gpSelect) gpSelect.innerHTML = '';
 
     const adminSearch = document.getElementById('adminSearchInput');
     if (adminSearch) adminSearch.value = '';
