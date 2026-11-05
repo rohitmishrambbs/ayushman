@@ -38,7 +38,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- Custom Stylesheet -->
-    <link rel="stylesheet" href="css/styles.css?v=3.5">
+    <link rel="stylesheet" href="css/styles.css?v=3.6">
 </head>
 <body class="bg-slate-50/80 text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
 
@@ -327,7 +327,9 @@
 
                         <div class="lg:col-span-3">
                             <label class="block text-[11px] font-bold text-slate-700 mb-1 uppercase tracking-wide">2. Gram Panchayat (GP)</label>
-                            <select id="gpSelector" onchange="resetPageAndLoad()" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-sm"></select>
+                            <select id="gpSelector" onchange="resetPageAndLoad()" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-sm">
+                                <option value="ALL">All Gram Panchayats</option>
+                            </select>
                         </div>
 
                         <div class="lg:col-span-2">
@@ -906,13 +908,13 @@
     </div>
 
     <!-- Application Scripts (Segregated by Responsibility) -->
-    <script src="js/config.js?v=3.5"></script>
-    <script src="js/state.js?v=3.5"></script>
-    <script src="js/auth.js?v=3.5"></script>
-    <script src="js/ui.js?v=3.5"></script>
-    <script src="js/deo.js?v=3.5"></script>
-    <script src="js/admin.js?v=3.5"></script>
-    <script src="js/export.js?v=3.5"></script>
-    <script src="js/app.js?v=3.5"></script>
+    <script src="js/config.js?v=3.6"></script>
+    <script src="js/state.js?v=3.6"></script>
+    <script src="js/auth.js?v=3.6"></script>
+    <script src="js/ui.js?v=3.6"></script>
+    <script src="js/deo.js?v=3.6"></script>
+    <script src="js/admin.js?v=3.6"></script>
+    <script src="js/export.js?v=3.6"></script>
+    <script src="js/app.js?v=3.6"></script>
 </body>
 </html>

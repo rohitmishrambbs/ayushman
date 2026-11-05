@@ -189,10 +189,10 @@ async function loadGPDropdown(preserveSelection = false, forceRefresh = false) {
     const gpSelect = document.getElementById('gpSelector');
     if (!gpSelect) return;
 
-    const previousValue = preserveSelection ? gpSelect.value : null;
+    const previousValue = preserveSelection ? gpSelect.value : 'ALL';
 
     if (block === 'ALL') {
-        gpSelect.innerHTML = '';
+        gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats</option>`;
         return;
     }
 
@@ -204,7 +204,7 @@ async function loadGPDropdown(preserveSelection = false, forceRefresh = false) {
     }
 
     if (!preserveSelection) {
-        gpSelect.innerHTML = `<option disabled>Loading GPs for ${block}...</option>`;
+        gpSelect.innerHTML = `<option value="ALL">Loading GPs for ${block}...</option>`;
     }
 
     try {
@@ -212,13 +212,13 @@ async function loadGPDropdown(preserveSelection = false, forceRefresh = false) {
         renderGPOptions(gpSelect, block, data, preserveSelection, previousValue);
     } catch (err) {
         if (!preserveSelection) {
-            gpSelect.innerHTML = '';
+            gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats</option>`;
         }
     }
 }
 
 function renderGPOptions(gpSelect, block, data, preserveSelection, previousValue) {
-    gpSelect.innerHTML = '';
+    gpSelect.innerHTML = `<option value="ALL">All Gram Panchayats</option>`;
     if (data && data.length > 0) {
         data.forEach(gp => {
             const gpName = String(gp.gram_panchayat_name ?? '');
@@ -231,15 +231,9 @@ function renderGPOptions(gpSelect, block, data, preserveSelection, previousValue
         });
     }
 
-    if (preserveSelection && previousValue && previousValue !== 'ALL') {
+    if (preserveSelection && previousValue) {
         const exists = Array.from(gpSelect.options).some(o => o.value === previousValue);
-        if (exists) {
-            gpSelect.value = previousValue;
-        } else if (gpSelect.options.length > 0) {
-            gpSelect.selectedIndex = 0;
-        }
-    } else if (gpSelect.options.length > 0) {
-        gpSelect.selectedIndex = 0;
+        gpSelect.value = exists ? previousValue : 'ALL';
     }
 }
 
